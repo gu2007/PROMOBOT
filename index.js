@@ -1,4 +1,4 @@
-const {
+﻿const {
   proximoProduto,
   totalProdutos,
   totalProdutosAtivos,
@@ -56,18 +56,6 @@ function formatarMensagem(produto) {
   return mensagem;
 }
 
-  const precoTexto = produto.precoAntigo
-    ? `~R$ ${produto.precoAntigo}~ ➡️ *R$ ${produto.preco}*`
-    : `*R$ ${produto.preco}*`;
-
-  return (
-    `🔥 *OFERTA* 🔥\n\n` +
-    `${produto.titulo}\n\n` +
-    `💰 ${precoTexto}\n\n` +
-    `👉 ${produto.linkAfiliado}\n\n` +
-    `_Preços podem mudar_`
-  );
-}
 
 // Envia um produto para o grupo, com imagem (se tiver) + texto
 async function enviarProduto(client, produto) {
