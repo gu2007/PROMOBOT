@@ -1,0 +1,151 @@
+# Robô de Ofertas de Afiliados para WhatsApp
+
+Busca produtos automaticamente no seu nicho, envia com imagem + texto para
+um grupo de WhatsApp, em horários e quantidade configuráveis.
+
+## ⚠️ Avisos importantes antes de começar
+
+- Use um **número de WhatsApp dedicado** para o robô (não seu número pessoal).
+  Envio automatizado viola os Termos de Serviço do WhatsApp e o número pode
+  ser banido. Ao usar um número separado, você protege sua conta principal.
+- Comece com poucos envios por dia e aumente com o tempo. Envios em excesso
+  ou muito rápidos aumentam bastante o risco de banimento.
+- O Mercado Livre **não tem API oficial para gerar link de afiliado
+  automaticamente** — só existe o gerador manual no painel de afiliados.
+  Ferramentas de terceiros que prometem isso via API normalmente fazem
+  scraping por fora das regras da plataforma, o que pode comprometer sua
+  conta de afiliado. Por isso, esse projeto automatiza a *busca* de produtos,
+  mas deixa a geração do link de afiliado como um passo manual rápido (ver
+  seção 4).
+
+## 1. Pré-requisitos
+
+- Node.js instalado (versão 18 ou mais recente) → https://nodejs.org
+- Um celular com WhatsApp instalado (será o número do robô)
+- Já ter criado o grupo de WhatsApp com os membros/interessados
+- Conta aprovada no programa de afiliados do Mercado Livre
+
+## 2. Instalação
+
+```bash
+npm install
+```
+
+## 3. Configurar o nicho, horários e quantidade de envios
+
+Abra `config.json`:
+
+```json
+{
+  "nicho": "ferramentas automotivas",
+  "termosDeBusca": [
+    "kit ferramentas automotivas",
+    "acessorios para carro",
+    "pecas automotivas"
+  ],
+  "horarioInicio": 8,
+  "horarioFim": 22,
+  "produtosPorHora": 2
+}
+```
+
+- `termosDeBusca`: palavras-chave usadas para buscar produtos no Mercado Livre
+- `horarioInicio` / `horarioFim`: faixa de horas em que o robô pode enviar (formato 24h)
+- `produtosPorHora`: quantos produtos enviar em cada hora dentro dessa faixa
+
+Você pode editar esse arquivo quando quiser — não precisa reiniciar o robô
+para trocar horários (ele relê o arquivo a cada hora), mas se mudar o nicho
+é melhor reiniciar.
+
+## 4. Buscar produtos automaticamente
+
+```bash
+npm run buscar-produtos
+```
+
+Isso consulta a API pública do Mercado Livre com os termos do `config.json`
+e gera um arquivo `candidatos.json` com produtos reais: nome, preço, imagem
+e o link normal do produto (`linkOriginal`).
+
+Abra `candidatos.json`. Para cada produto que você quiser usar:
+
+1. Copie o `linkOriginal`
+2. Cole em https://afiliados.mercadolivre.com.br (gerador de link)
+3. Copie o link de afiliado gerado
+4. Cole no campo `linkAfiliado` daquele produto, substituindo o placeholder
+
+Depois de preencher o `linkAfiliado` de um ou mais produtos, rode:
+
+```bash
+npm run publicar-produtos
+```
+
+Isso move os produtos prontos de `candidatos.json` para `products.json` —
+que é a lista que o robô realmente usa para enviar. Você pode repetir esse
+processo (buscar → completar link → publicar) sempre que quiser renovar o
+catálogo de ofertas.
+
+## 5. Descobrir o ID do seu grupo
+
+```bash
+npm run listar-grupos
+```
+
+Escaneie o QR code e copie o ID do grupo desejado (formato `123...@g.us`).
+
+## 6. Configurar o robô
+
+Abra `index.js` e cole o ID do grupo:
+
+```js
+const GROUP_ID = 'COLE_O_ID_DO_GRUPO_AQUI@g.us';
+```
+
+## 7. Rodar o robô
+
+```bash
+npm start
+```
+
+Escaneie o QR code (só na primeira vez). A partir daí, o robô:
+
+- Confere `config.json` a cada hora
+- Se a hora atual estiver dentro do horário permitido, agenda os envios
+  daquela hora em minutos aleatórios (para não parecer spam)
+- Envia cada produto com imagem + texto + link, puxando da fila em
+  `products.json`
+
+## 8. Testar manualmente sem esperar o horário
+
+Com o robô rodando, em outro terminal:
+
+```powershell
+Invoke-WebRequest -Uri http://localhost:3000/send -Method POST -ContentType "application/json" -Body "{}" -UseBasicParsing
+```
+
+## 9. Usando o n8n como orquestrador (opcional)
+
+O robô também aceita pedidos HTTP em `http://localhost:3000/send`, então o
+n8n pode disparar envios extras, postar a mesma oferta no Facebook/Instagram,
+ou até substituir o agendamento interno se você preferir. Consulte a seção
+anterior do histórico do projeto para o passo a passo de configuração do
+workflow no n8n.
+
+## Comandos disponíveis (resumo)
+
+```bash
+npm install              # instala as dependências
+npm run buscar-produtos  # busca produtos novos no nicho configurado
+npm run publicar-produtos # move produtos com link de afiliado prontos para products.json
+npm run listar-grupos    # descobre o ID dos seus grupos de WhatsApp
+npm start                # roda o robô
+```
+
+## Próximos passos possíveis
+
+- Gerar automaticamente o texto de divulgação para Instagram/Facebook
+  a partir da mesma lista de produtos
+- Migrar para o Telegram como canal adicional (mais estável, sem risco de
+  banimento) usando a Bot API oficial
+- Automatizar parte da geração de link de afiliado com uma extensão de
+  navegador (o Mercado Livre não bloqueia isso, só não tem API pública)

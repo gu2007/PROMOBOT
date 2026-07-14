@@ -1,0 +1,8 @@
+[
+    {
+        "id": 1,
+        "usuario": "admin",
+        "senha": "123456",
+        "ativo": true
+    }
+]

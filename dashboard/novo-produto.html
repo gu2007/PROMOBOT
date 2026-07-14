@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Novo Produto - PROMOBOT</title>
+
+    <link rel="stylesheet" href="assets/css/style.css">
+
+</head>
+
+<body>
+
+    <aside class="sidebar">
+
+        <h2>PROMOBOT</h2>
+
+        <nav>
+
+            <a href="/dashboard">🏠 Dashboard</a>
+
+            <a href="/produtos">📦 Produtos</a>
+
+            <a href="/novo-produto">➕ Novo Produto</a>
+
+            <a href="#">📥 Importações</a>
+
+            <a href="#">📤 Divulgações</a>
+
+            <a href="/configuracoes">⚙️ Configurações</a>
+
+            <a href="#">📊 Estatísticas</a>
+
+            <a href="#">📜 Logs</a>
+
+        </nav>
+
+    </aside>
+
+    <main>
+
+        <h1>Cadastrar Produto</h1>
+
+        <div class="card">
+
+            <label>Marketplace</label>
+
+            <select id="marketplace">
+
+                <option>Mercado Livre</option>
+                <option>Shopee</option>
+                <option>Amazon</option>
+
+            </select>
+
+            <label>Categoria</label>
+
+            <input
+                type="text"
+                id="categoria"
+                placeholder="Ex.: Ferramentas Automotivas">
+
+            <label>Título</label>
+
+            <input
+                type="text"
+                id="titulo">
+
+            <label>Preço Atual</label>
+
+            <input
+                type="number"
+                id="preco"
+                step="0.01">
+
+            <label>Preço Antigo</label>
+
+            <input
+                type="number"
+                id="precoAntigo"
+                step="0.01">
+
+            <label>Link de Afiliado</label>
+
+            <input
+                type="text"
+                id="linkAfiliado">
+
+            <br><br>
+
+            <button id="cadastrar">
+
+                Cadastrar Produto
+
+            </button>
+
+            <p id="mensagem"></p>
+
+        </div>
+
+    </main>
+
+    <script src="assets/js/novo-produto.js"></script>
+
+</body>
+
+</html>

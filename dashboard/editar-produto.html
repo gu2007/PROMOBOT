@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Editar Produto - PROMOBOT</title>
+
+    <link rel="stylesheet" href="/assets/css/style.css">
+
+</head>
+
+<body>
+
+    <aside class="sidebar">
+
+        <h2>PROMOBOT</h2>
+
+        <nav>
+
+            <a href="/dashboard">🏠 Dashboard</a>
+
+            <a href="/produtos">📦 Produtos</a>
+
+            <a href="/novo-produto">➕ Novo Produto</a>
+
+            <a href="#">📥 Importações</a>
+
+            <a href="#">📤 Divulgações</a>
+
+            <a href="/configuracoes">⚙️ Configurações</a>
+
+            <a href="#">📊 Estatísticas</a>
+
+            <a href="#">📜 Logs</a>
+
+        </nav>
+
+    </aside>
+
+    <main>
+
+        <h1>Editar Produto</h1>
+
+        <div class="card">
+
+            <input type="hidden" id="id">
+
+            <label>Marketplace</label>
+
+            <select id="marketplace">
+
+                <option>Mercado Livre</option>
+                <option>Shopee</option>
+                <option>Amazon</option>
+
+            </select>
+
+            <label>Categoria</label>
+
+            <input type="text" id="categoria">
+
+            <label>Título</label>
+
+            <input type="text" id="titulo">
+
+            <label>Preço Atual</label>
+
+            <input type="number" step="0.01" id="preco">
+
+            <label>Preço Antigo</label>
+
+            <input type="number" step="0.01" id="precoAntigo">
+
+            <label>Link de Afiliado</label>
+
+            <input type="text" id="linkAfiliado">
+
+            <br><br>
+
+            <button id="salvar">
+
+                Salvar Alterações
+
+            </button>
+
+            <p id="mensagem"></p>
+
+        </div>
+
+    </main>
+
+    <script src="/assets/js/editar-produto.js"></script>
+
+</body>
+
+</html>

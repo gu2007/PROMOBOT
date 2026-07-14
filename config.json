@@ -1,0 +1,17 @@
+{
+  "mercadoLivre": {
+    "clientId": "3630659079223462",
+    "clientSecret": "rd56009ezLV2HICM7pAqEUywmlG1p8x6",
+    "redirectUri": "https://www.google.com"
+  },
+  "nicho": "ferramentas automotivas",
+  "termosDeBusca": [
+    "kit ferramentas automotivas",
+    "acessorios para carro",
+    "pecas automotivas"
+  ],
+  "horarioInicio": 7,
+  "horarioFim": 23,
+  "produtosPorHora": 15,
+  "sistemaAtivo": false
+}

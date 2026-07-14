@@ -1,0 +1,15 @@
+[
+  {
+    "titulo": "Parafusadeira Bosch GSB 550",
+    "categoria": "Ferramentas",
+    "marca": "Bosch",
+    "preco": 299.90,
+    "precoAntigo": 399.90,
+    "desconto": 25,
+    "avaliacao": 4.8,
+    "vendidos": 1250,
+    "link": "https://www.seulink.com",
+    "imagem": "https://www.suaimagem.com/imagem.jpg",
+    "texto": ""
+  }
+]

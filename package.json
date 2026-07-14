@@ -1,0 +1,18 @@
+{
+  "name": "whatsapp-afiliados",
+  "version": "1.0.0",
+  "description": "Robo de envio automatico de ofertas de afiliados para grupo de WhatsApp",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "listar-grupos": "node index.js listar-grupos",
+    "buscar-produtos": "node buscar-produtos.js",
+    "publicar-produtos": "node publicar-produtos.js"
+  },
+  "dependencies": {
+    "whatsapp-web.js": "^1.23.0",
+    "qrcode-terminal": "^0.12.0",
+    "node-cron": "^3.0.3",
+    "express": "^4.19.2"
+  }
+}

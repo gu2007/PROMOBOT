@@ -1,0 +1,16 @@
+﻿# Dependências (serão reinstaladas via npm install)
+node_modules/
+
+# Sessão autenticada do WhatsApp Web (dados sensíveis, gerado automaticamente)
+.wwebjs_auth/
+
+# Cache do WhatsApp Web (gerado automaticamente)
+.wwebjs_cache/
+
+# Logs
+npm-debug.log*
+*.log
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
