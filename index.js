@@ -85,9 +85,16 @@ const client = new Client({
   },
 });
 
-client.on('qr', (qr) => {
-  console.log('Escaneie o QR code abaixo com o WhatsApp:');
-  qrcode.generate(qr, { small: true });
+const client = new Client({
+  authStrategy: new LocalAuth(), // guarda a sessão localmente, não precisa escanear QR toda vez
+  puppeteer: {
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  },
+  webVersionCache: {
+    type: 'remote',
+    remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1031490220-alpha.html',
+  },
 });
 
 // ---- Agendamento automático baseado em config.json ----
