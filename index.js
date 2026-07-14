@@ -89,6 +89,11 @@ const client = new Client({
   },
 });
 
+client.on('qr', (qr) => {
+  console.log('📱 Escaneie o QR Code abaixo com o WhatsApp do robô:');
+  qrcode.generate(qr, { small: true });
+});
+
 // ---- Agendamento automático baseado em config.json ----
 // A cada hora "cheia", verifica se está dentro do horário permitido e, se sim,
 // agenda N envios (produtosPorHora) espaçados dentro dessa hora, em minutos
