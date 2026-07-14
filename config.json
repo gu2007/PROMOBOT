@@ -13,5 +13,6 @@
   "horarioInicio": 7,
   "horarioFim": 23,
   "produtosPorHora": 15,
-  "sistemaAtivo": false
+  "intervaloRepeticaoHoras": 24,
+  "sistemaAtivo": true
 }

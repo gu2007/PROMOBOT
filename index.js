@@ -36,12 +36,25 @@ function carregarConfig() {
 // Monta o texto da mensagem a partir de um produto
 function formatarMensagem(produto) {
 
+  const precoTexto = produto.precoAntigo
+    ? `~R$ ${produto.precoAntigo}~ ➡️ *R$ ${produto.preco}*`
+    : `*R$ ${produto.preco}*`;
+
+  let mensagem =
+    `🔥 *OFERTA* 🔥\n\n` +
+    `${produto.titulo}\n\n` +
+    `💰 ${precoTexto}\n\n`;
+
   if (produto.texto && produto.texto.trim() !== '') {
-    return produto.texto
-      .replace('{titulo}', produto.titulo)
-      .replace('{preco}', produto.preco)
-      .replace('{link}', produto.linkAfiliado);
+    mensagem += `${produto.texto}\n\n`;
   }
+
+  mensagem +=
+    `👉 ${produto.linkAfiliado}\n\n` +
+    `_Preços podem mudar_`;
+
+  return mensagem;
+}
 
   const precoTexto = produto.precoAntigo
     ? `~R$ ${produto.precoAntigo}~ ➡️ *R$ ${produto.preco}*`
@@ -140,7 +153,7 @@ function agendarEnviosDaHora(client) {
     const produto = proximoProduto();
 
     if (!produto) {
-        console.log("⚠️ Nenhum produto cadastrado.");
+        console.log("⚠️ Nenhum produto disponível para envio (sem produtos ativos ou todos em cooldown).");
         return;
     }
 

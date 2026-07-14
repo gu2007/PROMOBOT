@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
+const CONFIG_PATH = path.join(__dirname, 'config.json');
+
 const marcasConhecidas = [
     'Bosch',
     'Makita',
@@ -134,7 +136,22 @@ function buscarProduto(id) {
 
 function proximoProduto() {
 
-    const produtos = listarProdutosAtivos();
+    let intervaloHoras = 24;
+
+    if (fs.existsSync(CONFIG_PATH)) {
+        const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+        if (typeof config.intervaloRepeticaoHoras === 'number') {
+            intervaloHoras = config.intervaloRepeticaoHoras;
+        }
+    }
+
+    const agora = Date.now();
+
+    const produtos = listarProdutosAtivos().filter(p => {
+        if (!p.ultimaDivulgacao) return true;
+        const horasDesdeEnvio = (agora - new Date(p.ultimaDivulgacao).getTime()) / (1000 * 60 * 60);
+        return horasDesdeEnvio >= intervaloHoras;
+    });
 
 
     if (produtos.length === 0) return null;
