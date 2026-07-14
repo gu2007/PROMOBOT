@@ -14,6 +14,8 @@ const express = require('express');
 const dashboardRoute = require('./routes/dashboard');
 const configRoute = require('./routes/config');
 const produtosRoute = require('./routes/produtos');
+const authRoute = require('./routes/auth');
+const session = require('express-session');
 const scheduler = require('./scheduler');
 
 // ======= CONFIGURAÇÕES =======
@@ -53,9 +55,7 @@ function formatarMensagem(produto) {
     `👉 ${produto.linkAfiliado}\n\n` +
     `_Preços podem mudar_`;
 
-  return mensagem;
-}
-
+  return mensagem;}
 
 // Envia um produto para o grupo, com imagem (se tiver) + texto
 async function enviarProduto(client, produto) {
@@ -224,12 +224,39 @@ let ultimoEstadoSistema = carregarConfig().sistemaAtivo;
   cron.schedule('0 * * * *', () => agendarEnviosDaHora(client));
 
   // API para o n8n (opcional) - permite disparar um envio manualmente/externamente
-  if (USAR_N8N) {
+if (USAR_N8N) {
     console.log("➡️ Entrou no bloco do Express");
 
     const app = express();
 
     console.log("✅ Express criado");
+
+    app.use(express.json());
+
+    app.use(session({
+      secret: 'promobot-secret-troque-isso',
+      resave: false,
+      saveUninitialized: false,
+      cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 } // 30 dias
+    }));
+
+    function requireLogin(req, res, next) {
+
+      const rotasPublicas = ['/login.html', '/api/auth/login', '/send'];
+      const isAsset = req.path.startsWith('/assets/');
+
+      if (rotasPublicas.includes(req.path) || isAsset) return next();
+
+      if (req.session && req.session.autenticado) return next();
+
+      if (req.path.startsWith('/api/')) {
+        return res.status(401).json({ sucesso: false, mensagem: 'Não autenticado.' });
+      }
+
+      return res.redirect('/login.html');
+    }
+
+    app.use(requireLogin);
 
     // Arquivos estáticos do painel
 app.use(express.static(path.join(__dirname, 'dashboard')));
@@ -259,10 +286,10 @@ app.get('/novo-produto', (req, res) => {
 });
 
 
-    app.use(express.json());
     app.use('/api/dashboard', dashboardRoute);
     app.use('/api/config', configRoute);
     app.use('/api/produtos', produtosRoute);
+    app.use('/api/auth', authRoute);
 
     app.post('/send', async (req, res) => {
       try {

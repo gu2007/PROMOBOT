@@ -9,10 +9,11 @@
     "buscar-produtos": "node buscar-produtos.js",
     "publicar-produtos": "node publicar-produtos.js"
   },
-  "dependencies": {
+ "dependencies": {
     "whatsapp-web.js": "^1.23.0",
     "qrcode-terminal": "^0.12.0",
     "node-cron": "^3.0.3",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "express-session": "^1.18.0"
   }
 }
