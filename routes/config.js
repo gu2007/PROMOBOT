@@ -54,7 +54,7 @@ router.post("/", (req, res) => {
 
         const configAtual = carregarConfig();
 
-        const novoConfig = {
+      const novoConfig = {
 
             ...configAtual,
 
@@ -64,7 +64,9 @@ router.post("/", (req, res) => {
 
             horarioFim: Number(req.body.horarioFim),
 
-            produtosPorHora: Number(req.body.produtosPorHora)
+            produtosPorHora: Number(req.body.produtosPorHora),
+
+            intervaloRepeticaoHoras: Number(req.body.intervaloRepeticaoHoras)
 
         };
 

@@ -335,7 +335,6 @@ client.on('disconnected', (reason) => {
   console.log('Cliente desconectado:', reason);
 });
 
-let ultimoEstadoSistema = carregarConfig().sistemaAtivo;
 
 client.initialize();
 

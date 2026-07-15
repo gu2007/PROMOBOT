@@ -14,6 +14,8 @@ async function carregarConfiguracoes() {
 
         document.getElementById("produtosPorHora").value = config.produtosPorHora;
 
+        document.getElementById("intervaloRepeticaoHoras").value = config.intervaloRepeticaoHoras;
+
     } catch (erro) {
 
         console.error("Erro ao carregar configurações:", erro);
@@ -32,7 +34,9 @@ async function salvarConfiguracoes() {
 
         horarioFim: document.getElementById("horarioFim").value,
 
-        produtosPorHora: document.getElementById("produtosPorHora").value
+        produtosPorHora: document.getElementById("produtosPorHora").value,
+
+        intervaloRepeticaoHoras: document.getElementById("intervaloRepeticaoHoras").value
 
     };
 
