@@ -175,9 +175,9 @@ console.log(`⏰ Funcionamento        : ${config.horarioInicio}h às ${config.ho
 console.log(`📤 Produtos por hora    : ${config.produtosPorHora}`);
 console.log("═══════════════════════════════════════\n");
 
-fs.watch(CONFIG_PATH, { persistent: true }, () => {
+let ultimoEstadoSistema = config.sistemaAtivo;
 
-let ultimoEstadoSistema = carregarConfig().sistemaAtivo;
+fs.watch(CONFIG_PATH, { persistent: true }, () => {
 
     // Pequeno delay para garantir que o arquivo terminou de ser salvo
     setTimeout(() => {
@@ -334,7 +334,6 @@ servidor.on("error", (erro) => {
 client.on('disconnected', (reason) => {
   console.log('Cliente desconectado:', reason);
 });
-
 
 client.initialize();
 
