@@ -96,7 +96,7 @@ function adicionarProduto(produtoNovo) {
 
         produtoNovo.atualizadoEm = null;
 
-        produtoNovo.ativo = true;
+        produtoNovo.ativo = typeof produtoNovo.ativo === 'boolean' ? produtoNovo.ativo : true;
 
         produtos.push(produtoNovo);
 

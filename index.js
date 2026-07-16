@@ -15,6 +15,7 @@ const dashboardRoute = require('./routes/dashboard');
 const configRoute = require('./routes/config');
 const produtosRoute = require('./routes/produtos');
 const authRoute = require('./routes/auth');
+const iaRoute = require('./routes/ia');
 const session = require('express-session');
 const scheduler = require('./scheduler');
 
@@ -285,11 +286,16 @@ app.get('/novo-produto', (req, res) => {
     res.sendFile(path.join(__dirname, 'dashboard', 'novo-produto.html'));
 });
 
+app.get('/importar-ia', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dashboard', 'importar-ia.html'));
+});
+
 
     app.use('/api/dashboard', dashboardRoute);
     app.use('/api/config', configRoute);
     app.use('/api/produtos', produtosRoute);
     app.use('/api/auth', authRoute);
+    app.use('/api/ia', iaRoute);
 
     app.post('/send', async (req, res) => {
       try {
