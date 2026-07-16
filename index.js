@@ -177,9 +177,7 @@ console.log("══════════════════════�
 
 let ultimoEstadoSistema = config.sistemaAtivo;
 
-fs.watch(CONFIG_PATH, { persistent: true }, (eventType) => {
-
-    console.log(`🔍 [DEBUG] fs.watch disparou. Tipo de evento: ${eventType}`);
+fs.watch(CONFIG_PATH, { persistent: true }, () => {
 
     // Pequeno delay para garantir que o arquivo terminou de ser salvo
     setTimeout(() => {
