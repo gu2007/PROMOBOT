@@ -50,6 +50,61 @@ async function verificarLink(url) {
 }
 
 // ======================================
+// Chama o Gemini, tentando de novo em caso de sobrecarga (503),
+// e caindo para um modelo alternativo se o principal continuar instável
+// ======================================
+async function chamarGeminiComRetentativas(ai, prompt) {
+
+    const modelos = ['gemini-3.5-flash', 'gemini-3.1-flash-lite'];
+
+    let ultimoErro;
+
+    for (const modelo of modelos) {
+
+        for (let tentativa = 1; tentativa <= 3; tentativa++) {
+
+            try {
+
+                console.log(`🤖 Chamando ${modelo} (tentativa ${tentativa}/3)...`);
+
+                return await ai.models.generateContent({
+                    model: modelo,
+                    contents: prompt,
+                    config: {
+                        tools: [{ urlContext: {} }]
+                    }
+                });
+
+            } catch (erro) {
+
+                ultimoErro = erro;
+
+                const eSobrecarga = erro.status === 503 || (erro.message && erro.message.includes('UNAVAILABLE'));
+
+                if (eSobrecarga && tentativa < 3) {
+                    console.log(`⏳ ${modelo} sobrecarregado, tentando de novo (${tentativa}/3)...`);
+                    await new Promise(resolve => setTimeout(resolve, tentativa * 3000));
+                    continue;
+                }
+
+                if (eSobrecarga) {
+                    console.log(`⚠️ ${modelo} continua sobrecarregado após 3 tentativas. Tentando modelo alternativo...`);
+                    break;
+                }
+
+                throw erro;
+
+            }
+
+        }
+
+    }
+
+    throw ultimoErro;
+
+}
+
+// ======================================
 // EXTRAIR PRODUTOS DE UM LINK, VIA IA
 // ======================================
 router.post('/extrair', async (req, res) => {
@@ -109,39 +164,7 @@ Extraia TODOS os produtos únicos que aparecem na lista, seguindo estas regras o
 Retorne apenas o array JSON, sem nenhum texto antes ou depois, sem marcadores de código.
 `;
 
-        async function chamarGeminiComRetentativas(tentativas = 3) {
-
-            for (let i = 1; i <= tentativas; i++) {
-
-                try {
-
-                    return await ai.models.generateContent({
-                        model: 'gemini-3.5-flash',
-                        contents: prompt,
-                        config: {
-                            tools: [{ urlContext: {} }]
-                        }
-                    });
-
-                } catch (erro) {
-
-                    const eSobrecarga = erro.status === 503 || (erro.message && erro.message.includes('UNAVAILABLE'));
-
-                    if (eSobrecarga && i < tentativas) {
-                        console.log(`⏳ Gemini sobrecarregado, tentando de novo (${i}/${tentativas})...`);
-                        await new Promise(resolve => setTimeout(resolve, i * 3000));
-                        continue;
-                    }
-
-                    throw erro;
-
-                }
-
-            }
-
-        }
-
-        const resposta = await chamarGeminiComRetentativas();
+        const resposta = await chamarGeminiComRetentativas(ai, prompt);
 
         let textoResposta = resposta.text.trim();
 
@@ -182,7 +205,7 @@ Retorne apenas o array JSON, sem nenhum texto antes ou depois, sem marcadores de
 
         res.status(500).json({
             sucesso: false,
-            mensagem: 'Erro ao processar o link com a IA.'
+            mensagem: 'Erro ao processar o link com a IA. O Gemini pode estar temporariamente sobrecarregado — tente novamente em alguns minutos.'
         });
 
     }
