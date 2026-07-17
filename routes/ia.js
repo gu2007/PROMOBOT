@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
@@ -109,13 +109,39 @@ Extraia TODOS os produtos únicos que aparecem na lista, seguindo estas regras o
 Retorne apenas o array JSON, sem nenhum texto antes ou depois, sem marcadores de código.
 `;
 
-        const resposta = await ai.models.generateContent({
-            model: 'gemini-3.5-flash',
-            contents: prompt,
-            config: {
-                tools: [{ urlContext: {} }]
+        async function chamarGeminiComRetentativas(tentativas = 3) {
+
+            for (let i = 1; i <= tentativas; i++) {
+
+                try {
+
+                    return await ai.models.generateContent({
+                        model: 'gemini-3.5-flash',
+                        contents: prompt,
+                        config: {
+                            tools: [{ urlContext: {} }]
+                        }
+                    });
+
+                } catch (erro) {
+
+                    const eSobrecarga = erro.status === 503 || (erro.message && erro.message.includes('UNAVAILABLE'));
+
+                    if (eSobrecarga && i < tentativas) {
+                        console.log(`⏳ Gemini sobrecarregado, tentando de novo (${i}/${tentativas})...`);
+                        await new Promise(resolve => setTimeout(resolve, i * 3000));
+                        continue;
+                    }
+
+                    throw erro;
+
+                }
+
             }
-        });
+
+        }
+
+        const resposta = await chamarGeminiComRetentativas();
 
         let textoResposta = resposta.text.trim();
 
