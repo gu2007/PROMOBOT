@@ -134,7 +134,7 @@ router.post('/extrair', async (req, res) => {
         const prompt = `
 Acesse esta página do Mercado Livre: ${link}
 
-Extraia TODOS os produtos únicos que aparecem na lista, seguindo estas regras obrigatórias:
+Extraia 20 produtos únicos que aparecem na lista, seguindo estas regras obrigatórias:
 
 1. DEDUPLICAÇÃO: se o mesmo produto aparecer sendo vendido por vendedores diferentes, escolha apenas UMA ocorrência — a de melhor preço ou maior desconto.
 
