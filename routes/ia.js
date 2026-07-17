@@ -11,6 +11,13 @@ function carregarConfig() {
 }
 
 // ======================================
+// Manda um evento no formato SSE (Server-Sent Events) para o navegador
+// ======================================
+function enviarEvento(res, tipo, dados) {
+    res.write(`event: ${tipo}\ndata: ${JSON.stringify(dados)}\n\n`);
+}
+
+// ======================================
 // Confere se um link ainda existe e não caiu
 // numa página de "produto indisponível"
 // ======================================
@@ -50,10 +57,11 @@ async function verificarLink(url) {
 }
 
 // ======================================
-// Chama o Gemini, tentando de novo em caso de sobrecarga (503),
-// e caindo para um modelo alternativo se o principal continuar instável
+// Chama o Gemini EM STREAMING, tentando de novo em caso de sobrecarga (503),
+// e caindo para um modelo alternativo se o principal continuar instável.
+// Vai mandando cada pedaço de texto pro navegador conforme chega.
 // ======================================
-async function chamarGeminiComRetentativas(ai, prompt) {
+async function chamarGeminiComStreamETentativas(ai, prompt, res) {
 
     const modelos = ['gemini-3.5-flash', 'gemini-3.1-flash-lite'];
 
@@ -65,15 +73,35 @@ async function chamarGeminiComRetentativas(ai, prompt) {
 
             try {
 
-                console.log(`🤖 Chamando ${modelo} (tentativa ${tentativa}/3)...`);
+                console.log(`🤖 Chamando ${modelo} em streaming (tentativa ${tentativa}/3)...`);
+                enviarEvento(res, 'status', { mensagem: `Consultando ${modelo}...` });
 
-                return await ai.models.generateContent({
+                const streamResponse = await ai.models.generateContentStream({
                     model: modelo,
                     contents: prompt,
                     config: {
                         tools: [{ urlContext: {} }]
                     }
                 });
+
+                let textoAcumulado = '';
+
+                for await (const chunk of streamResponse) {
+
+                    const trecho = chunk.text || '';
+
+                    if (trecho) {
+                        textoAcumulado += trecho;
+                        enviarEvento(res, 'trecho', { texto: trecho });
+                    }
+
+                }
+
+                if (textoAcumulado.trim() === '') {
+                    throw new Error('Resposta vazia do modelo.');
+                }
+
+                return textoAcumulado;
 
             } catch (erro) {
 
@@ -83,12 +111,14 @@ async function chamarGeminiComRetentativas(ai, prompt) {
 
                 if (eSobrecarga && tentativa < 3) {
                     console.log(`⏳ ${modelo} sobrecarregado, tentando de novo (${tentativa}/3)...`);
+                    enviarEvento(res, 'status', { mensagem: `${modelo} sobrecarregado, tentando de novo (${tentativa}/3)...` });
                     await new Promise(resolve => setTimeout(resolve, tentativa * 3000));
                     continue;
                 }
 
                 if (eSobrecarga) {
                     console.log(`⚠️ ${modelo} continua sobrecarregado após 3 tentativas. Tentando modelo alternativo...`);
+                    enviarEvento(res, 'status', { mensagem: `${modelo} continua instável. Tentando modelo alternativo...` });
                     break;
                 }
 
@@ -105,29 +135,35 @@ async function chamarGeminiComRetentativas(ai, prompt) {
 }
 
 // ======================================
-// EXTRAIR PRODUTOS DE UM LINK, VIA IA
+// EXTRAIR PRODUTOS DE UM LINK, VIA IA (com streaming)
 // ======================================
 router.post('/extrair', async (req, res) => {
 
+    const { link } = req.body;
+
+    if (!link) {
+        return res.status(400).json({
+            sucesso: false,
+            mensagem: 'Informe um link para extrair os produtos.'
+        });
+    }
+
+    const config = carregarConfig();
+
+    if (!config.gemini || !config.gemini.apiKey) {
+        return res.status(500).json({
+            sucesso: false,
+            mensagem: 'Chave da API do Gemini não configurada.'
+        });
+    }
+
+    // A partir daqui, a resposta vira uma transmissão contínua (SSE)
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
     try {
-
-        const { link } = req.body;
-
-        if (!link) {
-            return res.status(400).json({
-                sucesso: false,
-                mensagem: 'Informe um link para extrair os produtos.'
-            });
-        }
-
-        const config = carregarConfig();
-
-        if (!config.gemini || !config.gemini.apiKey) {
-            return res.status(500).json({
-                sucesso: false,
-                mensagem: 'Chave da API do Gemini não configurada.'
-            });
-        }
 
         const ai = new GoogleGenAI({ apiKey: config.gemini.apiKey });
 
@@ -164,23 +200,23 @@ Extraia 20 produtos únicos que aparecem na lista, seguindo estas regras obrigat
 Retorne apenas o array JSON, sem nenhum texto antes ou depois, sem marcadores de código.
 `;
 
-        const resposta = await chamarGeminiComRetentativas(ai, prompt);
+        const textoResposta = await chamarGeminiComStreamETentativas(ai, prompt, res);
 
-        let textoResposta = resposta.text.trim();
+        let textoLimpo = textoResposta.trim();
 
         // Remove marcadores de código, caso a IA ainda mande mesmo pedindo pra não mandar
-        textoResposta = textoResposta.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+        textoLimpo = textoLimpo.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
 
         let produtos;
 
         try {
-            produtos = JSON.parse(textoResposta);
+            produtos = JSON.parse(textoLimpo);
         } catch (erroParse) {
-            return res.status(500).json({
-                sucesso: false,
-                mensagem: 'A IA retornou um formato inválido. Tente novamente.'
-            });
+            enviarEvento(res, 'erro', { mensagem: 'A IA retornou um formato inválido. Tente novamente.' });
+            return res.end();
         }
+
+        enviarEvento(res, 'status', { mensagem: 'Conferindo os links dos produtos encontrados...' });
 
         // Confere cada link antes de devolver pro Dashboard
         for (const produto of produtos) {
@@ -194,19 +230,19 @@ Retorne apenas o array JSON, sem nenhum texto antes ou depois, sem marcadores de
 
         }
 
-        res.json({
-            sucesso: true,
-            produtos: produtos
-        });
+        enviarEvento(res, 'final', { sucesso: true, produtos });
+
+        res.end();
 
     } catch (erro) {
 
         console.error('Erro ao extrair produtos com IA:', erro);
 
-        res.status(500).json({
-            sucesso: false,
+        enviarEvento(res, 'erro', {
             mensagem: 'Erro ao processar o link com a IA. O Gemini pode estar temporariamente sobrecarregado — tente novamente em alguns minutos.'
         });
+
+        res.end();
 
     }
 

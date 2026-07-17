@@ -1,9 +1,10 @@
-let produtosEncontrados = [];
+﻿let produtosEncontrados = [];
 
 async function buscarProdutos() {
 
     const link = document.getElementById('linkPagina').value.trim();
     const mensagemStatus = document.getElementById('mensagemStatus');
+    const areaStreaming = document.getElementById('areaStreaming');
     const resultados = document.getElementById('resultados');
     const botao = document.getElementById('btnBuscar');
 
@@ -12,7 +13,9 @@ async function buscarProdutos() {
         return;
     }
 
-    mensagemStatus.textContent = '⏳ Buscando produtos, isso pode levar até 1 minuto...';
+    mensagemStatus.textContent = '';
+    areaStreaming.style.display = 'block';
+    areaStreaming.textContent = '⏳ Iniciando...\n';
     resultados.innerHTML = '';
     botao.disabled = true;
 
@@ -24,22 +27,67 @@ async function buscarProdutos() {
             body: JSON.stringify({ link })
         });
 
-        const dados = await resposta.json();
-
-        if (!dados.sucesso) {
-            mensagemStatus.textContent = '❌ ' + (dados.mensagem || 'Erro ao buscar produtos.');
+        if (!resposta.ok || !resposta.body) {
+            areaStreaming.textContent += '❌ Erro ao conectar com o servidor.\n';
             botao.disabled = false;
             return;
         }
 
-        produtosEncontrados = dados.produtos;
+        const leitor = resposta.body.getReader();
+        const decodificador = new TextDecoder();
+        let bufferTexto = '';
 
-        mensagemStatus.textContent = `✅ ${produtosEncontrados.length} produto(s) encontrado(s). Revise antes de salvar.`;
+        while (true) {
 
-        renderizarResultados();
+            const { done, value } = await leitor.read();
+
+            if (done) break;
+
+            bufferTexto += decodificador.decode(value, { stream: true });
+
+            // Eventos SSE são separados por linha em branco dupla
+            const partes = bufferTexto.split('\n\n');
+            bufferTexto = partes.pop(); // guarda o pedaço incompleto para a próxima rodada
+
+            for (const parte of partes) {
+
+                const linhaEvento = parte.split('\n').find(l => l.startsWith('event:'));
+                const linhaDados = parte.split('\n').find(l => l.startsWith('data:'));
+
+                if (!linhaEvento || !linhaDados) continue;
+
+                const tipo = linhaEvento.replace('event:', '').trim();
+                const dados = JSON.parse(linhaDados.replace('data:', '').trim());
+
+                if (tipo === 'status') {
+                    areaStreaming.textContent += `\nℹ️ ${dados.mensagem}\n`;
+                }
+
+                if (tipo === 'trecho') {
+                    areaStreaming.textContent += dados.texto;
+                }
+
+                if (tipo === 'erro') {
+                    areaStreaming.textContent += `\n❌ ${dados.mensagem}\n`;
+                    mensagemStatus.textContent = '❌ ' + dados.mensagem;
+                }
+
+                if (tipo === 'final') {
+                    produtosEncontrados = dados.produtos;
+                    mensagemStatus.textContent = `✅ ${produtosEncontrados.length} produto(s) encontrado(s). Revise antes de salvar.`;
+                    areaStreaming.textContent += '\n\n✅ Concluído!\n';
+                    renderizarResultados();
+                }
+
+                areaStreaming.scrollTop = areaStreaming.scrollHeight;
+
+            }
+
+        }
 
     } catch (erro) {
 
+        areaStreaming.textContent += `\n❌ Erro de conexão: ${erro.message}\n`;
         mensagemStatus.textContent = '❌ Erro de conexão ao buscar produtos.';
 
     }
