@@ -58,7 +58,8 @@ async function verificarLink(url) {
 
 // ======================================
 // Chama o Gemini EM STREAMING, tentando de novo em caso de sobrecarga (503),
-// e caindo para um modelo alternativo se o principal continuar instável.
+// e caindo para um modelo alternativo se o principal continuar instável
+// OU se a cota diária dele esgotar (429).
 // Vai mandando cada pedaço de texto pro navegador conforme chega.
 // ======================================
 async function chamarGeminiComStreamETentativas(ai, prompt, res) {
@@ -108,7 +109,9 @@ async function chamarGeminiComStreamETentativas(ai, prompt, res) {
                 ultimoErro = erro;
 
                 const eSobrecarga = erro.status === 503 || (erro.message && erro.message.includes('UNAVAILABLE'));
+                const eCotaEsgotada = erro.status === 429 || (erro.message && erro.message.includes('RESOURCE_EXHAUSTED'));
 
+                // Sobrecarga momentânea (503): vale tentar de novo no mesmo modelo
                 if (eSobrecarga && tentativa < 3) {
                     console.log(`⏳ ${modelo} sobrecarregado, tentando de novo (${tentativa}/3)...`);
                     enviarEvento(res, 'status', { mensagem: `${modelo} sobrecarregado, tentando de novo (${tentativa}/3)...` });
@@ -116,12 +119,22 @@ async function chamarGeminiComStreamETentativas(ai, prompt, res) {
                     continue;
                 }
 
+                // Cota diária esgotada (429): não adianta tentar de novo no mesmo modelo,
+                // pula direto para o próximo modelo da lista.
+                if (eCotaEsgotada) {
+                    console.log(`⚠️ Cota diária de ${modelo} esgotada. Tentando modelo alternativo...`);
+                    enviarEvento(res, 'status', { mensagem: `Cota diária de ${modelo} esgotada. Tentando modelo alternativo...` });
+                    break;
+                }
+
+                // Sobrecarga que persistiu após as 3 tentativas: também troca de modelo
                 if (eSobrecarga) {
                     console.log(`⚠️ ${modelo} continua sobrecarregado após 3 tentativas. Tentando modelo alternativo...`);
                     enviarEvento(res, 'status', { mensagem: `${modelo} continua instável. Tentando modelo alternativo...` });
                     break;
                 }
 
+                // Qualquer outro erro (não é sobrecarga nem cota): não adianta insistir
                 throw erro;
 
             }
@@ -238,8 +251,12 @@ Retorne apenas o array JSON, sem nenhum texto antes ou depois, sem marcadores de
 
         console.error('Erro ao extrair produtos com IA:', erro);
 
+        const eCotaEsgotada = erro.status === 429 || (erro.message && erro.message.includes('RESOURCE_EXHAUSTED'));
+
         enviarEvento(res, 'erro', {
-            mensagem: 'Erro ao processar o link com a IA. O Gemini pode estar temporariamente sobrecarregado — tente novamente em alguns minutos.'
+            mensagem: eCotaEsgotada
+                ? 'A cota diária gratuita de todos os modelos disponíveis foi esgotada. Tente novamente amanhã, ou ative a cobrança no Google Cloud para aumentar o limite.'
+                : 'Erro ao processar o link com a IA. O Gemini pode estar temporariamente sobrecarregado — tente novamente em alguns minutos.'
         });
 
         res.end();
