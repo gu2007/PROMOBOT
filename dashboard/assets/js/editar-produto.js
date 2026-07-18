@@ -18,6 +18,20 @@ async function carregarProduto() {
         document.getElementById("precoAntigo").value = produto.precoAntigo;
         document.getElementById("linkAfiliado").value = produto.linkAfiliado;
 
+        const linkOriginalBotao = document.getElementById("linkOriginalBotao");
+        const avisoLinkNaoConfirmado = document.getElementById("avisoLinkNaoConfirmado");
+
+        const linkValido = produto.linkAfiliado && produto.linkAfiliado !== "LINK_NAO_CONFIRMADO" && produto.linkAfiliado.startsWith("http");
+
+        if (linkValido) {
+            linkOriginalBotao.href = produto.linkAfiliado;
+            linkOriginalBotao.style.display = "inline-block";
+        }
+
+        if (produto.linkAfiliado === "LINK_NAO_CONFIRMADO") {
+            avisoLinkNaoConfirmado.style.display = "block";
+        }
+
     } catch (erro) {
 
         console.error("Erro ao carregar produto:", erro);

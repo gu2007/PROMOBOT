@@ -286,6 +286,10 @@ app.get('/novo-produto', (req, res) => {
     res.sendFile(path.join(__dirname, 'dashboard', 'novo-produto.html'));
 });
 
+app.get('/editar-produto', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dashboard', 'editar-produto.html'));
+});
+
 app.get('/importar-ia', (req, res) => {
     res.sendFile(path.join(__dirname, 'dashboard', 'importar-ia.html'));
 });
