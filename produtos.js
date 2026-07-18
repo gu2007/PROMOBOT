@@ -65,9 +65,11 @@ function adicionarProduto(produtoNovo) {
 
     const produtos = carregarProdutos();
 
-    const existente = produtos.find(
-    p => p.linkAfiliado === produtoNovo.linkAfiliado
-);
+    const linkValido = produtoNovo.linkAfiliado && produtoNovo.linkAfiliado !== 'LINK_NAO_CONFIRMADO';
+
+    const existente = linkValido
+        ? produtos.find(p => p.linkAfiliado === produtoNovo.linkAfiliado)
+        : null;
 
     if (existente) {
 
@@ -103,7 +105,9 @@ function adicionarProduto(produtoNovo) {
     }
 
     salvarProdutos(produtos);
-      return "atualizado";
+
+    return "atualizado";
+
 }
 
 function listarProdutosAtivos() {
