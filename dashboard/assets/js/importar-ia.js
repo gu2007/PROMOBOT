@@ -152,6 +152,8 @@ async function salvarSelecionados() {
     }
 
     let salvos = 0;
+    let falhas = 0;
+    let ultimoErro = '';
 
     for (const checkbox of checkboxes) {
 
@@ -176,26 +178,52 @@ async function salvarSelecionados() {
 
         try {
 
-            await fetch('/api/produtos', {
+            const resposta = await fetch('/api/produtos', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(produtoParaSalvar)
             });
 
+            if (!resposta.ok) {
+
+                falhas++;
+
+                let corpoErro = '';
+                try {
+                    const dadosErro = await resposta.json();
+                    corpoErro = dadosErro.mensagem || JSON.stringify(dadosErro);
+                } catch (e) {
+                    corpoErro = await resposta.text();
+                }
+
+                ultimoErro = `HTTP ${resposta.status}: ${corpoErro}`;
+                console.error(`Erro ao salvar "${produto.titulo}":`, ultimoErro);
+                continue;
+
+            }
+
             salvos++;
 
         } catch (erro) {
 
-            console.error('Erro ao salvar produto:', erro);
+            falhas++;
+            ultimoErro = erro.message;
+            console.error(`Erro de rede ao salvar "${produto.titulo}":`, erro);
 
         }
 
     }
 
-    mensagemStatus.textContent = `✅ ${salvos} produto(s) salvo(s) como INATIVO. Vá em Produtos para revisar, trocar o link pelo seu link de afiliado, e ativar cada um.`;
+    if (falhas > 0) {
+        mensagemStatus.innerHTML = `⚠️ ${salvos} salvo(s), <strong>${falhas} falharam</strong>. Último erro: ${ultimoErro}`;
+    } else {
+        mensagemStatus.textContent = `✅ ${salvos} produto(s) salvo(s) como INATIVO. Vá em Produtos para revisar, trocar o link pelo seu link de afiliado, e ativar cada um.`;
+    }
 
-    produtosEncontrados = [];
-    document.getElementById('resultados').innerHTML = '';
+    if (salvos > 0) {
+        produtosEncontrados = [];
+        document.getElementById('resultados').innerHTML = '';
+    }
 
 }
 
