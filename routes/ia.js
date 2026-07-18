@@ -57,10 +57,55 @@ async function verificarLink(url) {
 }
 
 // ======================================
-// Chama o Gemini EM STREAMING, tentando de novo em caso de sobrecarga (503),
+// Chama o Gemini, tentando de novo em caso de sobrecarga (503)
 // e caindo para um modelo alternativo se o principal continuar instável
-// OU se a cota diária dele esgotar (429).
-// Vai mandando cada pedaço de texto pro navegador conforme chega.
+// ou se a cota diária dele esgotar (429).
+// ======================================
+async function chamarGeminiComTentativas(ai, modelos, params) {
+
+    let ultimoErro;
+
+    for (const modelo of modelos) {
+
+        for (let tentativa = 1; tentativa <= 3; tentativa++) {
+
+            try {
+
+                return await ai.models.generateContent({
+                    model: modelo,
+                    ...params
+                });
+
+            } catch (erro) {
+
+                ultimoErro = erro;
+
+                const eSobrecarga = erro.status === 503 || (erro.message && erro.message.includes('UNAVAILABLE'));
+                const eCotaEsgotada = erro.status === 429 || (erro.message && erro.message.includes('RESOURCE_EXHAUSTED'));
+
+                if (eSobrecarga && tentativa < 3) {
+                    await new Promise(resolve => setTimeout(resolve, tentativa * 3000));
+                    continue;
+                }
+
+                if (eSobrecarga || eCotaEsgotada) {
+                    break;
+                }
+
+                throw erro;
+
+            }
+
+        }
+
+    }
+
+    throw ultimoErro;
+
+}
+
+// ======================================
+// Versão em streaming, usada só na Etapa 1 (extração da página)
 // ======================================
 async function chamarGeminiComStreamETentativas(ai, prompt, res) {
 
@@ -111,30 +156,22 @@ async function chamarGeminiComStreamETentativas(ai, prompt, res) {
                 const eSobrecarga = erro.status === 503 || (erro.message && erro.message.includes('UNAVAILABLE'));
                 const eCotaEsgotada = erro.status === 429 || (erro.message && erro.message.includes('RESOURCE_EXHAUSTED'));
 
-                // Sobrecarga momentânea (503): vale tentar de novo no mesmo modelo
                 if (eSobrecarga && tentativa < 3) {
-                    console.log(`⏳ ${modelo} sobrecarregado, tentando de novo (${tentativa}/3)...`);
                     enviarEvento(res, 'status', { mensagem: `${modelo} sobrecarregado, tentando de novo (${tentativa}/3)...` });
                     await new Promise(resolve => setTimeout(resolve, tentativa * 3000));
                     continue;
                 }
 
-                // Cota diária esgotada (429): não adianta tentar de novo no mesmo modelo,
-                // pula direto para o próximo modelo da lista.
                 if (eCotaEsgotada) {
-                    console.log(`⚠️ Cota diária de ${modelo} esgotada. Tentando modelo alternativo...`);
                     enviarEvento(res, 'status', { mensagem: `Cota diária de ${modelo} esgotada. Tentando modelo alternativo...` });
                     break;
                 }
 
-                // Sobrecarga que persistiu após as 3 tentativas: também troca de modelo
                 if (eSobrecarga) {
-                    console.log(`⚠️ ${modelo} continua sobrecarregado após 3 tentativas. Tentando modelo alternativo...`);
                     enviarEvento(res, 'status', { mensagem: `${modelo} continua instável. Tentando modelo alternativo...` });
                     break;
                 }
 
-                // Qualquer outro erro (não é sobrecarga nem cota): não adianta insistir
                 throw erro;
 
             }
@@ -148,7 +185,7 @@ async function chamarGeminiComStreamETentativas(ai, prompt, res) {
 }
 
 // ======================================
-// EXTRAIR PRODUTOS DE UM LINK, VIA IA (com streaming)
+// ETAPA 1 — EXTRAIR PRODUTOS DE UM LINK (sem tentar achar link de cada produto)
 // ======================================
 router.post('/extrair', async (req, res) => {
 
@@ -170,7 +207,6 @@ router.post('/extrair', async (req, res) => {
         });
     }
 
-    // A partir daqui, a resposta vira uma transmissão contínua (SSE)
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -189,7 +225,7 @@ Extraia 10 produtos únicos que aparecem na lista, seguindo estas regras obrigat
 
 2. DIVERSIDADE: não repita o mesmo tipo de produto. Se houver várias opções do mesmo tipo (ex: várias furadeiras), escolha só a de melhor oferta, priorizando diversidade entre tipos de produto.
 
-3. LINK: copie o link EXATO do anúncio, igual ao atributo href do elemento daquele produto na página. Não crie, não complete e não deduza nenhuma parte do link. Se não tiver certeza absoluta, preencha "linkOriginal" com "LINK_NAO_CONFIRMADO" e explique em "observacao".
+3. NÃO inclua nenhum link nesta etapa — isso será feito separadamente depois. Foque só em extrair os dados com precisão.
 
 4. Retorne EXATAMENTE neste formato JSON (mesmos nomes de campos):
 
@@ -198,15 +234,13 @@ Extraia 10 produtos únicos que aparecem na lista, seguindo estas regras obrigat
     "marketplace": "mercadolivre",
     "categoria": "string",
     "marca": "string ou null",
-    "titulo": "string",
+    "titulo": "string, o título completo e exato do anúncio",
     "preco": número,
     "precoAntigo": número ou null,
     "desconto": número ou null,
     "avaliacao": número ou null,
     "vendidos": número ou null,
-    "linkOriginal": "string",
-    "texto": "string, texto de venda persuasivo em português, até 200 caracteres",
-    "observacao": "string ou null"
+    "texto": "string, texto de venda persuasivo em português, até 200 caracteres"
   }
 ]
 
@@ -217,7 +251,6 @@ Retorne apenas o array JSON, sem nenhum texto antes ou depois, sem marcadores de
 
         let textoLimpo = textoResposta.trim();
 
-        // Remove marcadores de código, caso a IA ainda mande mesmo pedindo pra não mandar
         textoLimpo = textoLimpo.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
 
         let produtos;
@@ -229,19 +262,11 @@ Retorne apenas o array JSON, sem nenhum texto antes ou depois, sem marcadores de
             return res.end();
         }
 
-        enviarEvento(res, 'status', { mensagem: 'Conferindo os links dos produtos encontrados...' });
-
-        // Confere cada link antes de devolver pro Dashboard
-        for (const produto of produtos) {
-
-            if (!produto.linkOriginal || produto.linkOriginal === 'LINK_NAO_CONFIRMADO') {
-                produto.linkVerificado = false;
-                continue;
-            }
-
-            produto.linkVerificado = await verificarLink(produto.linkOriginal);
-
-        }
+        // Nesta etapa, todo produto ainda não tem link — marca como pendente
+        produtos.forEach(produto => {
+            produto.linkOriginal = null;
+            produto.linkVerificado = false;
+        });
 
         enviarEvento(res, 'final', { sucesso: true, produtos });
 
@@ -255,11 +280,94 @@ Retorne apenas o array JSON, sem nenhum texto antes ou depois, sem marcadores de
 
         enviarEvento(res, 'erro', {
             mensagem: eCotaEsgotada
-                ? 'A cota diária gratuita de todos os modelos disponíveis foi esgotada. Tente novamente amanhã, ou ative a cobrança no Google Cloud para aumentar o limite.'
+                ? 'A cota diária gratuita de todos os modelos disponíveis foi esgotada. Tente novamente amanhã, ou verifique seu saldo no Google Cloud.'
                 : 'Erro ao processar o link com a IA. O Gemini pode estar temporariamente sobrecarregado — tente novamente em alguns minutos.'
         });
 
         res.end();
+
+    }
+
+});
+
+// ======================================
+// ETAPA 2 — BUSCAR O LINK DE UM PRODUTO ESPECÍFICO (chamada pequena e focada)
+// ======================================
+router.post('/buscar-link', async (req, res) => {
+
+    try {
+
+        const { titulo, marca, preco, marketplace } = req.body;
+
+        if (!titulo) {
+            return res.status(400).json({
+                sucesso: false,
+                mensagem: 'Informe o título do produto.'
+            });
+        }
+
+        const config = carregarConfig();
+
+        if (!config.gemini || !config.gemini.apiKey) {
+            return res.status(500).json({
+                sucesso: false,
+                mensagem: 'Chave da API do Gemini não configurada.'
+            });
+        }
+
+        const ai = new GoogleGenAI({ apiKey: config.gemini.apiKey });
+
+        const site = (marketplace || 'mercadolivre').toLowerCase().includes('mercado')
+            ? 'mercadolivre.com.br'
+            : (marketplace || '').toLowerCase();
+
+        const prompt = `
+Busque no Google o link exato do anúncio deste produto, preferencialmente no site ${site}:
+
+Título: "${titulo}"
+${marca ? `Marca: "${marca}"` : ''}
+${preco ? `Preço aproximado: R$ ${preco}` : ''}
+
+Retorne APENAS a URL completa do anúncio mais compatível com esse título específico, sem nenhum texto adicional antes ou depois.
+
+Se não encontrar um produto que bata com certeza razoável com esse título específico, retorne exatamente esta palavra, sem mais nada: LINK_NAO_CONFIRMADO
+`;
+
+        const resposta = await chamarGeminiComTentativas(
+            ai,
+            ['gemini-3.1-flash-lite', 'gemini-3.5-flash'],
+            {
+                contents: prompt,
+                config: {
+                    tools: [{ googleSearch: {} }]
+                }
+            }
+        );
+
+        let link = (resposta.text || '').trim();
+
+        // Remove possíveis marcadores ou texto extra que a IA insista em mandar
+        const match = link.match(/https?:\/\/\S+/);
+        link = match ? match[0].replace(/[.,;)\]]+$/, '') : 'LINK_NAO_CONFIRMADO';
+
+        const linkVerificado = link !== 'LINK_NAO_CONFIRMADO'
+            ? await verificarLink(link)
+            : false;
+
+        res.json({
+            sucesso: true,
+            link: link,
+            linkVerificado: linkVerificado
+        });
+
+    } catch (erro) {
+
+        console.error('Erro ao buscar link do produto:', erro);
+
+        res.status(500).json({
+            sucesso: false,
+            mensagem: 'Erro ao buscar o link deste produto.'
+        });
 
     }
 
