@@ -138,13 +138,24 @@ function renderizarConteudoCartao(produto, indice) {
     let statusLink;
 
     if (!produto.linkOriginal) {
+
         statusLink = '<span style="color: #999;">⏳ Link ainda não buscado</span>';
-    } else if (produto.linkOriginal === 'LINK_NAO_CONFIRMADO') {
-        statusLink = '<span style="color: red;">🔴 A IA não encontrou o link deste produto com confiança. Busque manualmente pelo título.</span>';
-    } else if (produto.linkVerificado) {
-        statusLink = `<span style="color: green;">✅ Link verificado: <a href="${produto.linkOriginal}" target="_blank">abrir</a></span>`;
+
     } else {
-        statusLink = `<span style="color: red;">🔴 Link encontrado mas não verificado (pode estar quebrado) — <a href="${produto.linkOriginal}" target="_blank">abrir mesmo assim</a></span>`;
+
+        const confiancaTexto = produto.confianca === 'alta'
+            ? '<span style="color: green; font-weight: bold;">Confiança alta</span>'
+            : '<span style="color: orange; font-weight: bold;">⚠️ Confiança baixa — confira antes de usar</span>';
+
+        const verificadoTexto = produto.linkVerificado
+            ? '<span style="color: green;">✅ Link acessível</span>'
+            : '<span style="color: red;">🔴 Link pode estar quebrado</span>';
+
+        statusLink = `
+            ${confiancaTexto} · ${verificadoTexto}<br>
+            <a href="${produto.linkOriginal}" target="_blank" style="word-break: break-all;">${produto.linkOriginal}</a>
+        `;
+
     }
 
     return `
@@ -202,6 +213,7 @@ async function buscarLinksSelecionados() {
             if (dados.sucesso) {
                 produto.linkOriginal = dados.link;
                 produto.linkVerificado = dados.linkVerificado;
+                produto.confianca = dados.confianca;
             }
 
         } catch (erro) {

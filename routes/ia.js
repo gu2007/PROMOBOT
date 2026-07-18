@@ -322,15 +322,22 @@ router.post('/buscar-link', async (req, res) => {
             : (marketplace || '').toLowerCase();
 
         const prompt = `
-Busque no Google o link exato do anúncio deste produto, preferencialmente no site ${site}:
+Busque no Google o link EXATO da página do anúncio deste produto específico (não uma página de busca ou lista com vários produtos), preferencialmente no site ${site}:
 
 Título: "${titulo}"
 ${marca ? `Marca: "${marca}"` : ''}
 ${preco ? `Preço aproximado: R$ ${preco}` : ''}
 
-Retorne APENAS a URL completa do anúncio mais compatível com esse título específico, sem nenhum texto adicional antes ou depois.
+Um link correto de anúncio do Mercado Livre geralmente contém "/MLB" seguido de números (exemplos: mercadolivre.com.br/p/MLB12345678 ou mercadolivre.com.br/produto-nome/MLB-12345678). NUNCA retorne um link de busca ou lista (que costuma começar com "lista.mercadolivre.com.br" ou conter "?q=" ou "/busca").
 
-Se não encontrar um produto que bata com certeza razoável com esse título específico, retorne exatamente esta palavra, sem mais nada: LINK_NAO_CONFIRMADO
+Retorne no seguinte formato JSON, sem nenhum texto antes ou depois, sem marcadores de código:
+
+{
+  "link": "a URL completa mais provável para esse produto, mesmo que você não tenha certeza absoluta",
+  "confianca": "alta ou baixa"
+}
+
+Nunca deixe o campo "link" vazio — sempre retorne a melhor URL que você conseguir encontrar, mesmo que a confiança seja baixa.
 `;
 
         const resposta = await chamarGeminiComTentativas(
@@ -344,19 +351,41 @@ Se não encontrar um produto que bata com certeza razoável com esse título esp
             }
         );
 
-        let link = (resposta.text || '').trim();
+        let textoResposta = (resposta.text || '').trim();
+        textoResposta = textoResposta.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
 
-        // Remove possíveis marcadores ou texto extra que a IA insista em mandar
-        const match = link.match(/https?:\/\/\S+/);
-        link = match ? match[0].replace(/[.,;)\]]+$/, '') : 'LINK_NAO_CONFIRMADO';
+        let link = null;
+        let confianca = 'baixa';
 
-        const linkVerificado = link !== 'LINK_NAO_CONFIRMADO'
+        try {
+            const dadosResposta = JSON.parse(textoResposta);
+            link = dadosResposta.link || null;
+            confianca = dadosResposta.confianca === 'alta' ? 'alta' : 'baixa';
+        } catch (erroParse) {
+            // Se não veio em JSON, tenta extrair qualquer URL do texto como plano B
+            const match = textoResposta.match(/https?:\/\/\S+/);
+            link = match ? match[0].replace(/[.,;)\]]+$/, '') : null;
+        }
+
+        // Rebaixa a confiança automaticamente se parecer uma página de busca/lista, não um produto específico
+        const pareceListaOuBusca = link && (
+            link.includes('lista.mercadolivre') ||
+            link.includes('/busca') ||
+            link.includes('?q=')
+        );
+
+        if (pareceListaOuBusca) {
+            confianca = 'baixa';
+        }
+
+        const linkVerificado = link
             ? await verificarLink(link)
             : false;
 
         res.json({
             sucesso: true,
             link: link,
+            confianca: confianca,
             linkVerificado: linkVerificado
         });
 
