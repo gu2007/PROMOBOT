@@ -4,6 +4,7 @@
   "description": "Robo de envio automatico de ofertas de afiliados para grupo de WhatsApp",
   "main": "index.js",
   "scripts": {
+    
     "start": "node index.js",
     "listar-grupos": "node index.js listar-grupos",
     "buscar-produtos": "node buscar-produtos.js",
@@ -15,6 +16,8 @@
     "node-cron": "^3.0.3",
     "express": "^4.19.2",
     "express-session": "^1.18.0",
-    "@google/genai": "^1.0.0"
+    "@google/genai": "^1.0.0",
+    "multer": "^1.4.5-lts.1",
+    "mammoth": "^1.8.0"
   }
 }

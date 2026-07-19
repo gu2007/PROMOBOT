@@ -51,13 +51,49 @@
 
         <section class="card" style="max-width: 700px;">
 
-            <label>Cole o link de uma página de busca/categoria do Mercado Livre</label>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
 
-            <input id="linkPagina" type="text" placeholder="https://lista.mercadolivre.com.br/...">
+                <button type="button" class="botaoAba" data-aba="link" onclick="mudarAba('link')">🔗 Link</button>
+                <button type="button" class="botaoAba" data-aba="arquivo" onclick="mudarAba('arquivo')">📎 Arquivo (PDF/Word)</button>
+                <button type="button" class="botaoAba" data-aba="texto" onclick="mudarAba('texto')">📝 Texto colado</button>
 
-            <br><br>
+            </div>
 
-            <button id="btnBuscar">🔍 Buscar produtos</button>
+            <div id="abaLink">
+
+                <label>Cole o link de uma página de busca/categoria do Mercado Livre</label>
+
+                <input type="text" id="linkPagina" placeholder="https://lista.mercadolivre.com.br/...">
+
+                <br><br>
+
+                <button id="btnBuscarLink">🔍 Buscar produtos pelo link</button>
+
+            </div>
+
+            <div id="abaArquivo" style="display: none;">
+
+                <label>Envie um arquivo PDF ou Word (.docx) com os produtos</label>
+
+                <input type="file" id="arquivoProdutos" accept=".pdf,.docx">
+
+                <br><br>
+
+                <button id="btnBuscarArquivo">🔍 Buscar produtos no arquivo</button>
+
+            </div>
+
+            <div id="abaTexto" style="display: none;">
+
+                <label>Cole abaixo o texto copiado da página de produtos</label>
+
+                <textarea id="textoProdutos" rows="8" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;" placeholder="Cole aqui o texto copiado da página..."></textarea>
+
+                <br><br>
+
+                <button id="btnBuscarTexto">🔍 Buscar produtos no texto</button>
+
+            </div>
 
             <p id="mensagemStatus"></p>
 

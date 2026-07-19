@@ -1,22 +1,116 @@
 ﻿let produtosEncontrados = [];
 
-async function buscarProdutos() {
+// ======================================
+// Controle das abas (Link / Arquivo / Texto)
+// ======================================
+function mudarAba(aba) {
 
-    const link = document.getElementById('linkPagina').value.trim();
+    document.getElementById('abaLink').style.display = aba === 'link' ? 'block' : 'none';
+    document.getElementById('abaArquivo').style.display = aba === 'arquivo' ? 'block' : 'none';
+    document.getElementById('abaTexto').style.display = aba === 'texto' ? 'block' : 'none';
+
+    document.querySelectorAll('.botaoAba').forEach(botao => {
+        botao.style.fontWeight = botao.dataset.aba === aba ? 'bold' : 'normal';
+        botao.style.textDecoration = botao.dataset.aba === aba ? 'underline' : 'none';
+    });
+
+}
+
+// ======================================
+// Função genérica que processa a transmissão (SSE) vinda do servidor,
+// usada pelas 3 formas de busca (link, arquivo, texto)
+// ======================================
+async function processarStream(resposta) {
+
+    const mensagemStatus = document.getElementById('mensagemStatus');
+    const areaStreaming = document.getElementById('areaStreaming');
+
+    if (!resposta.ok || !resposta.body) {
+        areaStreaming.textContent += '❌ Erro ao conectar com o servidor.\n';
+        return;
+    }
+
+    const leitor = resposta.body.getReader();
+    const decodificador = new TextDecoder();
+    let bufferTexto = '';
+
+    while (true) {
+
+        const { done, value } = await leitor.read();
+
+        if (done) break;
+
+        bufferTexto += decodificador.decode(value, { stream: true });
+
+        const partes = bufferTexto.split('\n\n');
+        bufferTexto = partes.pop();
+
+        for (const parte of partes) {
+
+            const linhaEvento = parte.split('\n').find(l => l.startsWith('event:'));
+            const linhaDados = parte.split('\n').find(l => l.startsWith('data:'));
+
+            if (!linhaEvento || !linhaDados) continue;
+
+            const tipo = linhaEvento.replace('event:', '').trim();
+            const dados = JSON.parse(linhaDados.replace('data:', '').trim());
+
+            if (tipo === 'status') {
+                areaStreaming.textContent += `\nℹ️ ${dados.mensagem}\n`;
+            }
+
+            if (tipo === 'trecho') {
+                areaStreaming.textContent += dados.texto;
+            }
+
+            if (tipo === 'erro') {
+                areaStreaming.textContent += `\n❌ ${dados.mensagem}\n`;
+                mensagemStatus.textContent = '❌ ' + dados.mensagem;
+            }
+
+            if (tipo === 'final') {
+                produtosEncontrados = dados.produtos;
+                mensagemStatus.textContent = `✅ ${produtosEncontrados.length} produto(s) encontrado(s). Busque o link de cada um e cole na caixinha antes de salvar.`;
+                areaStreaming.textContent += '\n\n✅ Concluído!\n';
+                renderizarResultados();
+            }
+
+            areaStreaming.scrollTop = areaStreaming.scrollHeight;
+
+        }
+
+    }
+
+}
+
+function prepararTelaParaBusca() {
+
     const mensagemStatus = document.getElementById('mensagemStatus');
     const areaStreaming = document.getElementById('areaStreaming');
     const resultados = document.getElementById('resultados');
-    const botao = document.getElementById('btnBuscar');
+
+    mensagemStatus.textContent = '';
+    areaStreaming.style.display = 'block';
+    areaStreaming.textContent = '⏳ Iniciando...\n';
+    resultados.innerHTML = '';
+
+}
+
+// ======================================
+// FORMA 1 — Buscar produtos por LINK
+// ======================================
+async function buscarProdutosPorLink() {
+
+    const link = document.getElementById('linkPagina').value.trim();
+    const mensagemStatus = document.getElementById('mensagemStatus');
+    const botao = document.getElementById('btnBuscarLink');
 
     if (!link) {
         mensagemStatus.textContent = 'Cole um link antes de buscar.';
         return;
     }
 
-    mensagemStatus.textContent = '';
-    areaStreaming.style.display = 'block';
-    areaStreaming.textContent = '⏳ Iniciando...\n';
-    resultados.innerHTML = '';
+    prepararTelaParaBusca();
     botao.disabled = true;
 
     try {
@@ -27,66 +121,11 @@ async function buscarProdutos() {
             body: JSON.stringify({ link })
         });
 
-        if (!resposta.ok || !resposta.body) {
-            areaStreaming.textContent += '❌ Erro ao conectar com o servidor.\n';
-            botao.disabled = false;
-            return;
-        }
-
-        const leitor = resposta.body.getReader();
-        const decodificador = new TextDecoder();
-        let bufferTexto = '';
-
-        while (true) {
-
-            const { done, value } = await leitor.read();
-
-            if (done) break;
-
-            bufferTexto += decodificador.decode(value, { stream: true });
-
-            const partes = bufferTexto.split('\n\n');
-            bufferTexto = partes.pop();
-
-            for (const parte of partes) {
-
-                const linhaEvento = parte.split('\n').find(l => l.startsWith('event:'));
-                const linhaDados = parte.split('\n').find(l => l.startsWith('data:'));
-
-                if (!linhaEvento || !linhaDados) continue;
-
-                const tipo = linhaEvento.replace('event:', '').trim();
-                const dados = JSON.parse(linhaDados.replace('data:', '').trim());
-
-                if (tipo === 'status') {
-                    areaStreaming.textContent += `\nℹ️ ${dados.mensagem}\n`;
-                }
-
-                if (tipo === 'trecho') {
-                    areaStreaming.textContent += dados.texto;
-                }
-
-                if (tipo === 'erro') {
-                    areaStreaming.textContent += `\n❌ ${dados.mensagem}\n`;
-                    mensagemStatus.textContent = '❌ ' + dados.mensagem;
-                }
-
-                if (tipo === 'final') {
-                    produtosEncontrados = dados.produtos;
-                    mensagemStatus.textContent = `✅ ${produtosEncontrados.length} produto(s) encontrado(s). Busque o link de cada um e cole na caixinha antes de salvar.`;
-                    areaStreaming.textContent += '\n\n✅ Concluído!\n';
-                    renderizarResultados();
-                }
-
-                areaStreaming.scrollTop = areaStreaming.scrollHeight;
-
-            }
-
-        }
+        await processarStream(resposta);
 
     } catch (erro) {
 
-        areaStreaming.textContent += `\n❌ Erro de conexão: ${erro.message}\n`;
+        document.getElementById('areaStreaming').textContent += `\n❌ Erro de conexão: ${erro.message}\n`;
         mensagemStatus.textContent = '❌ Erro de conexão ao buscar produtos.';
 
     }
@@ -95,6 +134,87 @@ async function buscarProdutos() {
 
 }
 
+// ======================================
+// FORMA 2 — Buscar produtos por ARQUIVO (PDF ou Word)
+// ======================================
+async function buscarProdutosPorArquivo() {
+
+    const inputArquivo = document.getElementById('arquivoProdutos');
+    const mensagemStatus = document.getElementById('mensagemStatus');
+    const botao = document.getElementById('btnBuscarArquivo');
+
+    if (!inputArquivo.files || inputArquivo.files.length === 0) {
+        mensagemStatus.textContent = 'Selecione um arquivo antes de buscar.';
+        return;
+    }
+
+    prepararTelaParaBusca();
+    botao.disabled = true;
+
+    try {
+
+        const formData = new FormData();
+        formData.append('arquivo', inputArquivo.files[0]);
+
+        const resposta = await fetch('/api/ia/extrair-arquivo', {
+            method: 'POST',
+            body: formData
+        });
+
+        await processarStream(resposta);
+
+    } catch (erro) {
+
+        document.getElementById('areaStreaming').textContent += `\n❌ Erro de conexão: ${erro.message}\n`;
+        mensagemStatus.textContent = '❌ Erro de conexão ao buscar produtos.';
+
+    }
+
+    botao.disabled = false;
+
+}
+
+// ======================================
+// FORMA 3 — Buscar produtos por TEXTO colado
+// ======================================
+async function buscarProdutosPorTexto() {
+
+    const texto = document.getElementById('textoProdutos').value.trim();
+    const mensagemStatus = document.getElementById('mensagemStatus');
+    const botao = document.getElementById('btnBuscarTexto');
+
+    if (!texto) {
+        mensagemStatus.textContent = 'Cole o texto antes de buscar.';
+        return;
+    }
+
+    prepararTelaParaBusca();
+    botao.disabled = true;
+
+    try {
+
+        const resposta = await fetch('/api/ia/extrair-texto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ texto })
+        });
+
+        await processarStream(resposta);
+
+    } catch (erro) {
+
+        document.getElementById('areaStreaming').textContent += `\n❌ Erro de conexão: ${erro.message}\n`;
+        mensagemStatus.textContent = '❌ Erro de conexão ao buscar produtos.';
+
+    }
+
+    botao.disabled = false;
+
+}
+
+// ======================================
+// Renderização dos resultados (igual para as 3 formas)
+// ======================================
 function renderizarResultados() {
 
     const resultados = document.getElementById('resultados');
@@ -143,6 +263,9 @@ function renderizarResultados() {
 
 }
 
+// ======================================
+// Salvar os produtos selecionados (igual para as 3 formas)
+// ======================================
 async function salvarSelecionados() {
 
     const checkboxes = document.querySelectorAll('.checkboxProduto:checked');
@@ -232,4 +355,8 @@ async function salvarSelecionados() {
 
 }
 
-document.getElementById('btnBuscar').addEventListener('click', buscarProdutos);
+document.getElementById('btnBuscarLink').addEventListener('click', buscarProdutosPorLink);
+document.getElementById('btnBuscarArquivo').addEventListener('click', buscarProdutosPorArquivo);
+document.getElementById('btnBuscarTexto').addEventListener('click', buscarProdutosPorTexto);
+
+mudarAba('link');
