@@ -18,94 +18,7 @@ function enviarEvento(res, tipo, dados) {
 }
 
 // ======================================
-// Confere se um link ainda existe e não caiu
-// numa página de "produto indisponível"
-// ======================================
-async function verificarLink(url) {
-
-    try {
-
-        const resposta = await fetch(url, {
-            method: 'GET',
-            redirect: 'follow',
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-        });
-
-        if (!resposta.ok) {
-            return false;
-        }
-
-        const html = await resposta.text();
-
-        const padroesIndisponivel = [
-            /publica[çc][ãa]o pausada/i,
-            /produto pausado/i,
-            /n[ãa]o est[áa] mais dispon[íi]vel/i,
-            /este produto n[ãa]o existe/i
-        ];
-
-        return !padroesIndisponivel.some(padrao => padrao.test(html));
-
-    } catch (erro) {
-
-        return false;
-
-    }
-
-}
-
-// ======================================
-// Chama o Gemini, tentando de novo em caso de sobrecarga (503)
-// e caindo para um modelo alternativo se o principal continuar instável
-// ou se a cota diária dele esgotar (429).
-// ======================================
-async function chamarGeminiComTentativas(ai, modelos, params) {
-
-    let ultimoErro;
-
-    for (const modelo of modelos) {
-
-        for (let tentativa = 1; tentativa <= 3; tentativa++) {
-
-            try {
-
-                return await ai.models.generateContent({
-                    model: modelo,
-                    ...params
-                });
-
-            } catch (erro) {
-
-                ultimoErro = erro;
-
-                const eSobrecarga = erro.status === 503 || (erro.message && erro.message.includes('UNAVAILABLE'));
-                const eCotaEsgotada = erro.status === 429 || (erro.message && erro.message.includes('RESOURCE_EXHAUSTED'));
-
-                if (eSobrecarga && tentativa < 3) {
-                    await new Promise(resolve => setTimeout(resolve, tentativa * 3000));
-                    continue;
-                }
-
-                if (eSobrecarga || eCotaEsgotada) {
-                    break;
-                }
-
-                throw erro;
-
-            }
-
-        }
-
-    }
-
-    throw ultimoErro;
-
-}
-
-// ======================================
-// Versão em streaming, usada só na Etapa 1 (extração da página)
+// Versão em streaming, usada na extração da página
 // ======================================
 async function chamarGeminiComStreamETentativas(ai, prompt, res) {
 
@@ -185,7 +98,8 @@ async function chamarGeminiComStreamETentativas(ai, prompt, res) {
 }
 
 // ======================================
-// ETAPA 1 — EXTRAIR PRODUTOS DE UM LINK (sem tentar achar link de cada produto)
+// EXTRAIR PRODUTOS DE UM LINK (sem tentar achar link de cada produto —
+// o link é buscado manualmente pelo usuário na tela)
 // ======================================
 router.post('/extrair', async (req, res) => {
 
@@ -225,7 +139,7 @@ Extraia 10 produtos únicos que aparecem na lista, seguindo estas regras obrigat
 
 2. DIVERSIDADE: não repita o mesmo tipo de produto. Se houver várias opções do mesmo tipo (ex: várias furadeiras), escolha só a de melhor oferta, priorizando diversidade entre tipos de produto.
 
-3. NÃO inclua nenhum link nesta etapa — isso será feito separadamente depois. Foque só em extrair os dados com precisão.
+3. NÃO inclua nenhum link nesta etapa. Foque só em extrair os dados com precisão.
 
 4. Retorne EXATAMENTE neste formato JSON (mesmos nomes de campos):
 
@@ -262,10 +176,9 @@ Retorne apenas o array JSON, sem nenhum texto antes ou depois, sem marcadores de
             return res.end();
         }
 
-        // Nesta etapa, todo produto ainda não tem link — marca como pendente
+        // Todo produto começa sem link — o usuário vai buscar manualmente na tela
         produtos.forEach(produto => {
-            produto.linkOriginal = null;
-            produto.linkVerificado = false;
+            produto.linkOriginal = '';
         });
 
         enviarEvento(res, 'final', { sucesso: true, produtos });
@@ -285,118 +198,6 @@ Retorne apenas o array JSON, sem nenhum texto antes ou depois, sem marcadores de
         });
 
         res.end();
-
-    }
-
-});
-
-// ======================================
-// ETAPA 2 — BUSCAR O LINK DE UM PRODUTO ESPECÍFICO (chamada pequena e focada)
-// ======================================
-router.post('/buscar-link', async (req, res) => {
-
-    try {
-
-        const { titulo, marca, preco, marketplace } = req.body;
-
-        if (!titulo) {
-            return res.status(400).json({
-                sucesso: false,
-                mensagem: 'Informe o título do produto.'
-            });
-        }
-
-        const config = carregarConfig();
-
-        if (!config.gemini || !config.gemini.apiKey) {
-            return res.status(500).json({
-                sucesso: false,
-                mensagem: 'Chave da API do Gemini não configurada.'
-            });
-        }
-
-        const ai = new GoogleGenAI({ apiKey: config.gemini.apiKey });
-
-        const site = (marketplace || 'mercadolivre').toLowerCase().includes('mercado')
-            ? 'mercadolivre.com.br'
-            : (marketplace || '').toLowerCase();
-
-        const prompt = `
-Busque no Google o link EXATO da página do anúncio deste produto específico (não uma página de busca ou lista com vários produtos), preferencialmente no site ${site}:
-
-Título: "${titulo}"
-${marca ? `Marca: "${marca}"` : ''}
-${preco ? `Preço aproximado: R$ ${preco}` : ''}
-
-Um link correto de anúncio do Mercado Livre geralmente contém "/MLB" seguido de números (exemplos: mercadolivre.com.br/p/MLB12345678 ou mercadolivre.com.br/produto-nome/MLB-12345678). NUNCA retorne um link de busca ou lista (que costuma começar com "lista.mercadolivre.com.br" ou conter "?q=" ou "/busca").
-
-Retorne no seguinte formato JSON, sem nenhum texto antes ou depois, sem marcadores de código:
-
-{
-  "link": "a URL completa mais provável para esse produto, mesmo que você não tenha certeza absoluta",
-  "confianca": "alta ou baixa"
-}
-
-Nunca deixe o campo "link" vazio — sempre retorne a melhor URL que você conseguir encontrar, mesmo que a confiança seja baixa.
-`;
-
-        const resposta = await chamarGeminiComTentativas(
-            ai,
-            ['gemini-3.1-flash-lite', 'gemini-3.5-flash'],
-            {
-                contents: prompt,
-                config: {
-                    tools: [{ googleSearch: {} }]
-                }
-            }
-        );
-
-        let textoResposta = (resposta.text || '').trim();
-        textoResposta = textoResposta.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
-
-        let link = null;
-        let confianca = 'baixa';
-
-        try {
-            const dadosResposta = JSON.parse(textoResposta);
-            link = dadosResposta.link || null;
-            confianca = dadosResposta.confianca === 'alta' ? 'alta' : 'baixa';
-        } catch (erroParse) {
-            // Se não veio em JSON, tenta extrair qualquer URL do texto como plano B
-            const match = textoResposta.match(/https?:\/\/\S+/);
-            link = match ? match[0].replace(/[.,;)\]]+$/, '') : null;
-        }
-
-        // Rebaixa a confiança automaticamente se parecer uma página de busca/lista, não um produto específico
-        const pareceListaOuBusca = link && (
-            link.includes('lista.mercadolivre') ||
-            link.includes('/busca') ||
-            link.includes('?q=')
-        );
-
-        if (pareceListaOuBusca) {
-            confianca = 'baixa';
-        }
-
-        const linkVerificado = link
-            ? await verificarLink(link)
-            : false;
-
-        res.json({
-            sucesso: true,
-            link: link,
-            confianca: confianca,
-            linkVerificado: linkVerificado
-        });
-
-    } catch (erro) {
-
-        console.error('Erro ao buscar link do produto:', erro);
-
-        res.status(500).json({
-            sucesso: false,
-            mensagem: 'Erro ao buscar o link deste produto.'
-        });
 
     }
 

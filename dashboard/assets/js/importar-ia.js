@@ -73,8 +73,8 @@ async function buscarProdutos() {
 
                 if (tipo === 'final') {
                     produtosEncontrados = dados.produtos;
-                    mensagemStatus.textContent = `✅ ${produtosEncontrados.length} produto(s) encontrado(s). Selecione quais quer buscar o link, depois marque para salvar.`;
-                    areaStreaming.textContent += '\n\n✅ Concluído! Agora selecione os produtos e clique em "Buscar links".\n';
+                    mensagemStatus.textContent = `✅ ${produtosEncontrados.length} produto(s) encontrado(s). Busque o link de cada um e cole na caixinha antes de salvar.`;
+                    areaStreaming.textContent += '\n\n✅ Concluído!\n';
                     renderizarResultados();
                 }
 
@@ -106,9 +106,25 @@ function renderizarResultados() {
         const div = document.createElement('div');
         div.className = 'card';
         div.style.marginBottom = '15px';
-        div.id = `produto-card-${indice}`;
 
-        div.innerHTML = renderizarConteudoCartao(produto, indice);
+        const termoBusca = encodeURIComponent(produto.titulo);
+        const urlBusca = `https://lista.mercadolivre.com.br/${termoBusca}`;
+
+        div.innerHTML = `
+            <label>
+                <input type="checkbox" class="checkboxProduto" data-indice="${indice}" checked>
+                <strong>${produto.titulo}</strong>
+            </label>
+            <p>💰 R$ ${produto.preco} ${produto.precoAntigo ? `(de R$ ${produto.precoAntigo})` : ''}</p>
+            <p>📂 ${produto.categoria || 'Sem categoria'} ${produto.marca ? '· ' + produto.marca : ''}</p>
+            <p>${produto.texto || ''}</p>
+            <a href="${urlBusca}" target="_blank">
+                <button type="button">🔍 Buscar produto no Mercado Livre</button>
+            </a>
+            <br><br>
+            <label>Cole aqui o link encontrado:</label>
+            <input type="text" class="inputLinkProduto" data-indice="${indice}" placeholder="https://www.mercadolivre.com.br/..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+        `;
 
         resultados.appendChild(div);
 
@@ -116,122 +132,14 @@ function renderizarResultados() {
 
     if (produtosEncontrados.length > 0) {
 
-        const botaoBuscarLinks = document.createElement('button');
-        botaoBuscarLinks.textContent = '🔗 Buscar links dos selecionados';
-        botaoBuscarLinks.id = 'btnBuscarLinks';
-        botaoBuscarLinks.addEventListener('click', buscarLinksSelecionados);
-        resultados.appendChild(botaoBuscarLinks);
-
         const botaoSalvar = document.createElement('button');
         botaoSalvar.textContent = '💾 Salvar produtos selecionados';
         botaoSalvar.id = 'btnSalvarSelecionados';
-        botaoSalvar.style.marginLeft = '10px';
+        botaoSalvar.style.marginTop = '15px';
         botaoSalvar.addEventListener('click', salvarSelecionados);
         resultados.appendChild(botaoSalvar);
 
     }
-
-}
-
-function renderizarConteudoCartao(produto, indice) {
-
-    let statusLink;
-
-    if (!produto.linkOriginal) {
-
-        statusLink = '<span style="color: #999;">⏳ Link ainda não buscado</span>';
-
-    } else {
-
-        const confiancaTexto = produto.confianca === 'alta'
-            ? '<span style="color: green; font-weight: bold;">Confiança alta</span>'
-            : '<span style="color: orange; font-weight: bold;">⚠️ Confiança baixa — confira antes de usar</span>';
-
-        const verificadoTexto = produto.linkVerificado
-            ? '<span style="color: green;">✅ Link acessível</span>'
-            : '<span style="color: red;">🔴 Link pode estar quebrado</span>';
-
-        statusLink = `
-            ${confiancaTexto} · ${verificadoTexto}<br>
-            <a href="${produto.linkOriginal}" target="_blank" style="word-break: break-all;">${produto.linkOriginal}</a>
-        `;
-
-    }
-
-    return `
-        <label>
-            <input type="checkbox" class="checkboxProduto" data-indice="${indice}" checked>
-            <strong>${produto.titulo}</strong>
-        </label>
-        <p>💰 R$ ${produto.preco} ${produto.precoAntigo ? `(de R$ ${produto.precoAntigo})` : ''}</p>
-        <p>📂 ${produto.categoria || 'Sem categoria'} ${produto.marca ? '· ' + produto.marca : ''}</p>
-        <p>${produto.texto || ''}</p>
-        <p id="statusLink-${indice}">${statusLink}</p>
-    `;
-
-}
-
-async function buscarLinksSelecionados() {
-
-    const checkboxes = document.querySelectorAll('.checkboxProduto:checked');
-    const mensagemStatus = document.getElementById('mensagemStatus');
-    const botao = document.getElementById('btnBuscarLinks');
-
-    if (checkboxes.length === 0) {
-        mensagemStatus.textContent = 'Selecione ao menos um produto para buscar o link.';
-        return;
-    }
-
-    botao.disabled = true;
-
-    let indice = 0;
-
-    for (const checkbox of checkboxes) {
-
-        indice++;
-
-        const idx = Number(checkbox.dataset.indice);
-        const produto = produtosEncontrados[idx];
-
-        mensagemStatus.textContent = `🔍 Buscando link ${indice}/${checkboxes.length}: ${produto.titulo.substring(0, 40)}...`;
-
-        try {
-
-            const resposta = await fetch('/api/ia/buscar-link', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    titulo: produto.titulo,
-                    marca: produto.marca,
-                    preco: produto.preco,
-                    marketplace: produto.marketplace
-                })
-            });
-
-            const dados = await resposta.json();
-
-            if (dados.sucesso) {
-                produto.linkOriginal = dados.link;
-                produto.linkVerificado = dados.linkVerificado;
-                produto.confianca = dados.confianca;
-            }
-
-        } catch (erro) {
-
-            console.error(`Erro ao buscar link do produto "${produto.titulo}":`, erro);
-
-        }
-
-        const cardAtual = document.getElementById(`produto-card-${idx}`);
-        if (cardAtual) {
-            cardAtual.innerHTML = renderizarConteudoCartao(produto, idx);
-        }
-
-    }
-
-    mensagemStatus.textContent = `✅ Busca de links concluída para ${checkboxes.length} produto(s).`;
-
-    botao.disabled = false;
 
 }
 
@@ -254,6 +162,9 @@ async function salvarSelecionados() {
         const indice = Number(checkbox.dataset.indice);
         const produto = produtosEncontrados[indice];
 
+        const campoLink = document.querySelector(`.inputLinkProduto[data-indice="${indice}"]`);
+        const linkDigitado = campoLink ? campoLink.value.trim() : '';
+
         const produtoParaSalvar = {
             marketplace: produto.marketplace,
             categoria: produto.categoria,
@@ -265,7 +176,7 @@ async function salvarSelecionados() {
             avaliacao: produto.avaliacao,
             vendidos: produto.vendidos,
             imagem: null,
-            linkAfiliado: produto.linkOriginal || 'LINK_NAO_CONFIRMADO',
+            linkAfiliado: linkDigitado || 'LINK_NAO_CONFIRMADO',
             texto: produto.texto,
             ativo: false
         };
@@ -311,7 +222,7 @@ async function salvarSelecionados() {
     if (falhas > 0) {
         mensagemStatus.innerHTML = `⚠️ ${salvos} salvo(s), <strong>${falhas} falharam</strong>. Último erro: ${ultimoErro}`;
     } else {
-        mensagemStatus.textContent = `✅ ${salvos} produto(s) salvo(s) como INATIVO. Vá em Produtos para revisar, trocar o link pelo seu link de afiliado, e ativar cada um.`;
+        mensagemStatus.textContent = `✅ ${salvos} produto(s) salvo(s) como INATIVO. Vá em Produtos para revisar e ativar cada um.`;
     }
 
     if (salvos > 0) {
