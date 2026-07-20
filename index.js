@@ -294,6 +294,10 @@ app.get('/importar-ia', (req, res) => {
     res.sendFile(path.join(__dirname, 'dashboard', 'importar-ia.html'));
 });
 
+app.get('/duplicados', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dashboard', 'duplicados.html'));
+});
+
 
     app.use('/api/dashboard', dashboardRoute);
     app.use('/api/config', configRoute);
