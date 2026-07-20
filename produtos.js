@@ -1,4 +1,4 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const path = require('path');
 
 const CONFIG_PATH = path.join(__dirname, 'config.json');
@@ -41,6 +41,82 @@ const marcasConhecidas = [
 ];
 
 const PRODUCTS_PATH = path.join(__dirname, 'products.json');
+
+// A partir daqui: com quanto de "parecido" (0 a 1) dois títulos já contam como suspeitos,
+// e qual a diferença de preço máxima aceitável (0.15 = 15%) para reforçar a suspeita.
+const SIMILARIDADE_MINIMA_TITULO = 0.5;
+const TOLERANCIA_PRECO = 0.15;
+
+function normalizarTitulo(titulo) {
+
+    return (titulo || '')
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+}
+
+function calcularSimilaridadeTitulos(tituloA, tituloB) {
+
+    const palavrasA = new Set(
+        normalizarTitulo(tituloA).split(' ').filter(palavra => palavra.length >= 3)
+    );
+
+    const palavrasB = new Set(
+        normalizarTitulo(tituloB).split(' ').filter(palavra => palavra.length >= 3)
+    );
+
+    if (palavrasA.size === 0 || palavrasB.size === 0) return 0;
+
+    let palavrasEmComum = 0;
+
+    palavrasA.forEach(palavra => {
+        if (palavrasB.has(palavra)) palavrasEmComum++;
+    });
+
+    const totalPalavrasUnicas = new Set([...palavrasA, ...palavrasB]).size;
+
+    return palavrasEmComum / totalPalavrasUnicas;
+
+}
+
+function precosSaoProximos(precoA, precoB) {
+
+    if (typeof precoA !== 'number' || typeof precoB !== 'number') return false;
+    if (precoA <= 0 || precoB <= 0) return false;
+
+    const diferenca = Math.abs(precoA - precoB) / Math.max(precoA, precoB);
+
+    return diferenca <= TOLERANCIA_PRECO;
+
+}
+
+// Procura, entre os produtos já cadastrados NO MESMO MARKETPLACE, algum com título
+// muito parecido e preço próximo do produto novo. Se achar, retorna esse produto
+// (o "original" suspeito); se não achar nada parecido o suficiente, retorna null.
+function encontrarDuplicataSuspeita(produtoNovo, produtosExistentes) {
+
+    const candidatos = produtosExistentes.filter(
+        p => p.marketplace === produtoNovo.marketplace
+    );
+
+    for (const candidato of candidatos) {
+
+        const similaridade = calcularSimilaridadeTitulos(produtoNovo.titulo, candidato.titulo);
+
+        if (similaridade >= SIMILARIDADE_MINIMA_TITULO && precosSaoProximos(produtoNovo.preco, candidato.preco)) {
+            return candidato;
+        }
+
+    }
+
+    return null;
+
+}
 
 function carregarProdutos() {
     if (!fs.existsSync(PRODUCTS_PATH)) return [];
@@ -99,6 +175,24 @@ function adicionarProduto(produtoNovo) {
         produtoNovo.atualizadoEm = null;
 
         produtoNovo.ativo = typeof produtoNovo.ativo === 'boolean' ? produtoNovo.ativo : true;
+
+        const duplicataSuspeita = encontrarDuplicataSuspeita(produtoNovo, produtos);
+
+        if (duplicataSuspeita) {
+
+            produtoNovo.duplicataSuspeita = true;
+            produtoNovo.duplicataDeId = duplicataSuspeita.id;
+
+            // Trava a divulgação até você revisar manualmente na aba de Duplicados,
+            // evitando mandar pro grupo um produto que pode ser repetido.
+            produtoNovo.ativo = false;
+
+        } else {
+
+            produtoNovo.duplicataSuspeita = false;
+            produtoNovo.duplicataDeId = null;
+
+        }
 
         produtos.push(produtoNovo);
 
