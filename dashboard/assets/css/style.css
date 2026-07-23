@@ -1,4 +1,4 @@
-*{
+﻿*{
     margin:0;
     padding:0;
     box-sizing:border-box;
@@ -17,15 +17,93 @@ body{
 
 .sidebar{
 
+    position:fixed;
+
+    top:0;
+
+    left:0;
+
     width:250px;
 
-    min-height:100vh;
+    height:100vh;
 
     background:#005744;
 
     color:white;
 
     padding:30px 20px;
+
+    transform:translateX(-100%);
+
+    transition:transform .3s ease;
+
+    z-index:999;
+
+    box-shadow:4px 0 20px rgba(0,0,0,.25);
+
+    overflow-y:auto;
+
+}
+
+.sidebar.aberta{
+
+    transform:translateX(0);
+
+}
+
+.botaoMenu{
+
+    position:fixed;
+
+    top:20px;
+
+    left:20px;
+
+    z-index:1000;
+
+    width:44px;
+
+    height:44px;
+
+    background:#005744;
+
+    color:white;
+
+    border:none;
+
+    border-radius:8px;
+
+    font-size:20px;
+
+    cursor:pointer;
+
+    box-shadow:0 2px 8px rgba(0,0,0,.2);
+
+}
+
+.botaoMenu:hover{
+
+    background:#00432f;
+
+}
+
+.overlayMenu{
+
+    display:none;
+
+    position:fixed;
+
+    inset:0;
+
+    background:rgba(0,0,0,.4);
+
+    z-index:998;
+
+}
+
+.overlayMenu.ativo{
+
+    display:block;
 
 }
 
@@ -72,6 +150,8 @@ main{
     flex:1;
 
     padding:40px;
+
+    padding-top:90px;
 
 }
 
@@ -136,6 +216,8 @@ header{
     align-items:center;
 
     justify-content:center;
+
+    padding-top:40px;
 
 }
 
