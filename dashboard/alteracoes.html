@@ -7,7 +7,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Duplicados - PROMOBOT</title>
+    <title>Alterações - PROMOBOT</title>
 
     <link rel="stylesheet" href="assets/css/style.css">
 
@@ -18,7 +18,6 @@
     <button class="botaoMenu" id="botaoMenu" aria-label="Abrir menu">☰</button>
 
     <div class="overlayMenu" id="overlayMenu"></div>
-
 
     <aside class="sidebar" id="sidebar">
 
@@ -52,15 +51,18 @@
 
     <main>
 
-        <h1>⚠️ Verificar Produtos Duplicados</h1>
+        <h1>🔄 Alterações de Preço e Disponibilidade</h1>
 
-        <p style="color: #666; margin-bottom: 20px;">Produtos importados que parecem repetir um produto já existente no mesmo marketplace. Eles ficam desativados automaticamente até você revisar.</p>
+        <p style="color: #666; margin-bottom: 20px;">Toda semana, o sistema confere se o preço e a disponibilidade dos produtos ativos ainda batem. Preço mudou: atualizado automaticamente. Produto sumiu/esgotou: desativado automaticamente. Os dois casos aparecem aqui pra você revisar.</p>
 
-        <div id="listaDuplicados"></div>
+        <button id="btnRodarAgora" style="margin-bottom: 20px;">▶️ Rodar verificação agora (teste manual)</button>
+        <p id="mensagemVerificacao"></p>
+
+        <div id="listaAlteracoes"></div>
 
     </main>
 
-    <script src="assets/js/duplicados.js"></script>
+    <script src="assets/js/alteracoes.js"></script>
 
     <script src="assets/js/menu.js"></script>
 

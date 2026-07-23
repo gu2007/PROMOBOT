@@ -302,6 +302,60 @@ function proximoProduto() {
 
 }
 
+// Diferença mínima de preço (10%) pra considerar que "mudou de verdade" e
+// vale a pena atualizar + avisar você, evitando ruído por centavos de arredondamento.
+const TOLERANCIA_MUDANCA_PRECO = 0.10;
+
+// Aplica o resultado da verificação semanal de um produto:
+// - se ficou indisponível: desativa o produto e marca pra revisão
+// - se o preço mudou de verdade: atualiza o preço sozinho e marca pra revisão
+// - se nada relevante mudou: não mexe em nada
+function aplicarResultadoVerificacao(id, resultado) {
+
+    const produtos = carregarProdutos();
+
+    const produto = produtos.find(p => p.id === Number(id));
+
+    if (!produto) return;
+
+    if (resultado.disponivel === false) {
+
+        produto.ativo = false;
+        produto.alteracaoDetectada = true;
+        produto.tipoAlteracao = 'indisponivel';
+        produto.dataVerificacao = new Date().toISOString();
+
+        salvarProdutos(produtos);
+        return;
+
+    }
+
+    if (typeof resultado.preco === 'number' && resultado.preco > 0) {
+
+        const precoAtual = produto.preco;
+        const diferenca = Math.abs(resultado.preco - precoAtual) / Math.max(resultado.preco, precoAtual);
+
+        if (diferenca >= TOLERANCIA_MUDANCA_PRECO) {
+
+            produto.precoAnterior = precoAtual;
+            produto.preco = resultado.preco;
+            produto.alteracaoDetectada = true;
+            produto.tipoAlteracao = 'preco';
+            produto.dataVerificacao = new Date().toISOString();
+
+            salvarProdutos(produtos);
+            return;
+
+        }
+
+    }
+
+}
+
+function listarAlteracoesDetectadas() {
+    return carregarProdutos().filter(p => p.alteracaoDetectada);
+}
+
 module.exports = {
 
     carregarProdutos,
@@ -318,6 +372,9 @@ module.exports = {
 
     adicionarProduto,
 
-    proximoProduto
+    proximoProduto,
+
+    aplicarResultadoVerificacao,
+    listarAlteracoesDetectadas
 
 };

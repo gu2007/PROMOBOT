@@ -16,6 +16,7 @@ const configRoute = require('./routes/config');
 const produtosRoute = require('./routes/produtos');
 const authRoute = require('./routes/auth');
 const iaRoute = require('./routes/ia');
+const { router: verificacaoRoute, rodarVerificacaoSemanal } = require('./routes/verificacao');
 const session = require('express-session');
 const scheduler = require('./scheduler');
 
@@ -224,6 +225,15 @@ fs.watch(CONFIG_PATH, { persistent: true }, () => {
   // E depois, a cada hora cheia (minuto 0), decide os envios daquela hora
   cron.schedule('0 * * * *', () => agendarEnviosDaHora(client));
 
+  // Verificação semanal de preço/disponibilidade dos produtos ativos
+  // (domingo às 3h da manhã, fora do horário normal de envios)
+  cron.schedule('0 3 * * 0', () => {
+    console.log('🔎 Iniciando verificação semanal de preço/disponibilidade...');
+    rodarVerificacaoSemanal().catch(erro => {
+        console.error('❌ Erro na verificação semanal:', erro);
+    });
+  });
+
   // API para o n8n (opcional) - permite disparar um envio manualmente/externamente
 if (USAR_N8N) {
     console.log("➡️ Entrou no bloco do Express");
@@ -298,12 +308,17 @@ app.get('/duplicados', (req, res) => {
     res.sendFile(path.join(__dirname, 'dashboard', 'duplicados.html'));
 });
 
+app.get('/alteracoes', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dashboard', 'alteracoes.html'));
+});
+
 
     app.use('/api/dashboard', dashboardRoute);
     app.use('/api/config', configRoute);
     app.use('/api/produtos', produtosRoute);
     app.use('/api/auth', authRoute);
     app.use('/api/ia', iaRoute);
+    app.use('/api/verificacao', verificacaoRoute);
 
     app.post('/send', async (req, res) => {
       try {
