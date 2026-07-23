@@ -213,6 +213,41 @@ async function buscarProdutosPorTexto() {
 }
 
 // ======================================
+// Monta a URL de busca mecânica (sem IA) certa pra cada marketplace
+// ======================================
+function montarInfoBuscaMarketplace(marketplace, titulo) {
+
+    const termoBusca = encodeURIComponent(titulo);
+
+    const marketplaceNormalizado = (marketplace || '')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '');
+
+    if (marketplaceNormalizado === 'amazon') {
+        return {
+            url: `https://www.amazon.com.br/s?k=${termoBusca}`,
+            rotulo: 'Amazon'
+        };
+    }
+
+    if (marketplaceNormalizado === 'shopee') {
+        return {
+            url: `https://shopee.com.br/search?keyword=${termoBusca}`,
+            rotulo: 'Shopee'
+        };
+    }
+
+    // Padrão: Mercado Livre (também usado se a IA não identificar o marketplace)
+    return {
+        url: `https://lista.mercadolivre.com.br/${termoBusca}`,
+        rotulo: 'Mercado Livre'
+    };
+
+}
+
+// ======================================
 // Renderização dos resultados (igual para as 3 formas)
 // ======================================
 function renderizarResultados() {
@@ -227,8 +262,7 @@ function renderizarResultados() {
         div.className = 'card';
         div.style.marginBottom = '15px';
 
-        const termoBusca = encodeURIComponent(produto.titulo);
-        const urlBusca = `https://lista.mercadolivre.com.br/${termoBusca}`;
+        const infoBusca = montarInfoBuscaMarketplace(produto.marketplace, produto.titulo);
 
         div.innerHTML = `
             <label>
@@ -238,12 +272,12 @@ function renderizarResultados() {
             <p>💰 R$ ${produto.preco} ${produto.precoAntigo ? `(de R$ ${produto.precoAntigo})` : ''}</p>
             <p>📂 ${produto.categoria || 'Sem categoria'} ${produto.marca ? '· ' + produto.marca : ''}</p>
             <p>${produto.texto || ''}</p>
-            <a href="${urlBusca}" target="_blank">
-                <button type="button">🔍 Buscar produto no Mercado Livre</button>
+            <a href="${infoBusca.url}" target="_blank">
+                <button type="button">🔍 Buscar produto no ${infoBusca.rotulo}</button>
             </a>
             <br><br>
             <label>Cole aqui o link encontrado:</label>
-            <input type="text" class="inputLinkProduto" data-indice="${indice}" placeholder="https://www.mercadolivre.com.br/..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+            <input type="text" class="inputLinkProduto" data-indice="${indice}" placeholder="https://..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
         `;
 
         resultados.appendChild(div);

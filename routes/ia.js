@@ -42,11 +42,13 @@ Extraia até 10 produtos únicos, seguindo estas regras obrigatórias:
 
 5. NÃO inclua nenhum link nesta etapa — isso será feito separadamente pelo usuário depois.
 
-6. Retorne EXATAMENTE neste formato JSON (mesmos nomes de campos):
+6. MARKETPLACE: identifique corretamente de qual site cada produto veio, com base no conteúdo/URL da fonte fornecida. Use EXATAMENTE um destes três valores (nunca outro): "mercadolivre", "amazon" ou "shopee". Não copie um valor fixo — cada produto deve refletir o marketplace real de onde ele veio.
+
+7. Retorne EXATAMENTE neste formato JSON (mesmos nomes de campos):
 
 [
   {
-    "marketplace": "mercadolivre",
+    "marketplace": "mercadolivre, amazon ou shopee — conforme a fonte real",
     "categoria": "string",
     "marca": "string ou null",
     "titulo": "string, o título completo e exato do anúncio",

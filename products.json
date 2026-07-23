@@ -239,5 +239,25 @@
     "criadoEm": "2026-07-13T14:00:00.000Z",
     "atualizadoEm": "2026-07-13T14:00:00.000Z",
     "ativo": true
+  },
+   {
+    "marketplace": "mercadolivre",
+    "categoria": "Iluminação",
+    "marca": "Volter",
+    "titulo": "Kit 20 Lâmpadas Filamento Led Volter T45 Retrô 4w E27 Bivolt",
+    "preco": 210.86,
+    "precoAntigo": 382.16,
+    "desconto": 44,
+    "avaliacao": null,
+    "vendidos": null,
+    "imagem": null,
+    "linkAfiliado": "https://meli.la/1FXP5yG",
+    "texto": "💡 Kit com 20 lâmpadas retrô LED com 44% OFF! Dê um toque vintage e aconchegante à decoração da sua casa.",
+    "id": 12,
+    "enviado": 0,
+    "ultimaDivulgacao": null,
+    "criadoEm": "2026-07-13T14:00:00.000Z",
+    "atualizadoEm": "2026-07-13T14:00:00.000Z",
+    "ativo": true
   }
 ]
