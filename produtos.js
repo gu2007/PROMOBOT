@@ -98,10 +98,22 @@ function precosSaoProximos(precoA, precoB) {
 // Procura, entre os produtos já cadastrados NO MESMO MARKETPLACE, algum com título
 // muito parecido e preço próximo do produto novo. Se achar, retorna esse produto
 // (o "original" suspeito); se não achar nada parecido o suficiente, retorna null.
+function normalizarMarketplace(marketplace) {
+
+    return (marketplace || '')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '');
+
+}
+
 function encontrarDuplicataSuspeita(produtoNovo, produtosExistentes) {
 
+    const marketplaceNovo = normalizarMarketplace(produtoNovo.marketplace);
+
     const candidatos = produtosExistentes.filter(
-        p => p.marketplace === produtoNovo.marketplace
+        p => normalizarMarketplace(p.marketplace) === marketplaceNovo
     );
 
     for (const candidato of candidatos) {
