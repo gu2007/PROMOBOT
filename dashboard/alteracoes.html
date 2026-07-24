@@ -55,7 +55,12 @@
 
         <p style="color: #666; margin-bottom: 20px;">Toda semana, o sistema confere se o preço e a disponibilidade dos produtos ativos ainda batem. Preço mudou: atualizado automaticamente. Produto sumiu/esgotou: desativado automaticamente. Os dois casos aparecem aqui pra você revisar.</p>
 
-        <button id="btnRodarAgora" style="margin-bottom: 20px;">▶️ Rodar verificação agora (teste manual)</button>
+        <div style="margin-bottom: 20px;">
+            <label>ID(s) de produto pra testar (opcional, separados por vírgula — ex: 12,15). Deixe vazio pra rodar em todos os produtos ativos.</label>
+            <input type="text" id="idsParaTestar" placeholder="Ex: 12, 15" style="width: 100%; max-width: 300px; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-top: 5px;">
+        </div>
+
+        <button id="btnRodarAgora" style="margin-bottom: 20px;">▶️ Rodar verificação agora</button>
         <p id="mensagemVerificacao"></p>
 
         <div id="listaAlteracoes"></div>

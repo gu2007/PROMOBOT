@@ -31,13 +31,20 @@ async function verificarProdutoUnico(ai, produto) {
 
     const prompt = `Acesse esta página de produto: ${produto.linkAfiliado}
 
-Diga se o produto ainda está disponível para compra (não removido, não esgotado) e qual é o preço atual dele.
+Sua tarefa tem duas partes:
+
+1. Primeiro, avalie se você CONSEGUIU acessar e ler o conteúdo real da página do produto. Isso é diferente de "achar que está indisponível" — se a página não carregou, redirecionou para uma tela de verificação/erro/bloqueio, mostrou captcha, ou você não tem certeza do que está vendo, isso conta como NÃO CONSEGUIU ACESSAR, mesmo que pareça sutilmente com uma página de "produto esgotado".
+
+2. Só se você TEVE CERTEZA de que acessou a página real do produto, diga se ele está disponível para compra e qual o preço atual.
+
+REGRA CRÍTICA: nunca assuma "indisponível" como suposição ou chute. "Indisponível" só deve ser reportado se a própria página do produto mostrar EXPLICITAMENTE uma mensagem como "produto esgotado", "anúncio pausado", "produto não encontrado" ou equivalente. Qualquer dúvida = NÃO CONSEGUIU ACESSAR.
 
 Retorne APENAS este JSON, sem nenhum texto antes ou depois, sem marcadores de código:
 
 {
-  "disponivel": true ou false,
-  "preco": número (preço atual, sem símbolo de moeda) ou null se não conseguir ler
+  "conseguiuAcessar": true ou false,
+  "disponivel": true ou false ou null (null se conseguiuAcessar for false),
+  "preco": número (preço atual, sem símbolo de moeda) ou null
 }`;
 
     const resposta = await ai.models.generateContent({
@@ -54,14 +61,17 @@ Retorne APENAS este JSON, sem nenhum texto antes ou depois, sem marcadores de c�
 }
 
 // ======================================
-// Roda a verificação em TODOS os produtos ativos, um de cada vez,
-// com uma pequena pausa entre eles pra não estourar limite de requisições.
+// Roda a verificação nos produtos ativos, um de cada vez, com uma pequena
+// pausa entre eles pra não estourar limite de requisições.
+// Se "idsEspecificos" for informado, verifica só esses produtos (útil pra
+// testar em poucos produtos antes de rodar em todo o catálogo).
 // ======================================
-async function rodarVerificacaoSemanal() {
+async function rodarVerificacaoSemanal(idsEspecificos) {
 
     const resumo = {
         totalVerificados: 0,
         alteracoesEncontradas: 0,
+        naoConseguiuAcessar: 0,
         falhas: 0,
         detalhes: []
     };
@@ -71,26 +81,39 @@ async function rodarVerificacaoSemanal() {
     try {
         apiKey = obterChaveGemini();
     } catch (erro) {
-        console.error('❌ Verificação semanal abortada:', erro.message);
+        console.error('❌ Verificação abortada:', erro.message);
         resumo.erro = erro.message;
         return resumo;
     }
 
     const ai = new GoogleGenAI({ apiKey });
 
-    const produtosAtivos = listarProdutosAtivos().filter(
+    let produtosParaChecar = listarProdutosAtivos().filter(
         p => p.linkAfiliado && p.linkAfiliado !== 'LINK_NAO_CONFIRMADO'
     );
 
-    console.log(`🔎 Verificação semanal iniciada: ${produtosAtivos.length} produto(s) ativo(s) para checar.`);
+    if (Array.isArray(idsEspecificos) && idsEspecificos.length > 0) {
+        const idsSet = new Set(idsEspecificos.map(Number));
+        produtosParaChecar = produtosParaChecar.filter(p => idsSet.has(p.id));
+    }
 
-    for (const produto of produtosAtivos) {
+    console.log(`🔎 Verificação iniciada: ${produtosParaChecar.length} produto(s) para checar.`);
+
+    for (const produto of produtosParaChecar) {
 
         try {
 
             const resultado = await verificarProdutoUnico(ai, produto);
 
             resumo.totalVerificados++;
+
+            if (resultado.conseguiuAcessar !== true) {
+
+                resumo.naoConseguiuAcessar++;
+                console.log(`ℹ️ Produto #${produto.id} não pôde ser confirmado (link bloqueado/inacessível), nada foi alterado: ${produto.titulo.slice(0, 50)}`);
+                continue;
+
+            }
 
             const precoAntes = produto.preco;
 
@@ -122,20 +145,22 @@ async function rodarVerificacaoSemanal() {
 
     }
 
-    console.log(`✅ Verificação semanal concluída: ${resumo.totalVerificados} verificado(s), ${resumo.alteracoesEncontradas} alteração(ões), ${resumo.falhas} falha(s).`);
+    console.log(`✅ Verificação concluída: ${resumo.totalVerificados} verificado(s), ${resumo.alteracoesEncontradas} alteração(ões), ${resumo.naoConseguiuAcessar} não confirmado(s), ${resumo.falhas} falha(s).`);
 
     return resumo;
 
 }
 
 // ======================================
-// Rota manual, pra testar a verificação sem esperar a semana passar
+// Rota manual, pra testar a verificação sem esperar a semana passar.
+// Aceita { produtoIds: [1, 2] } no corpo pra testar só em alguns produtos.
 // ======================================
 router.post('/rodar-agora', async (req, res) => {
 
     try {
 
-        const resumo = await rodarVerificacaoSemanal();
+        const idsEspecificos = req.body && Array.isArray(req.body.produtoIds) ? req.body.produtoIds : null;
+        const resumo = await rodarVerificacaoSemanal(idsEspecificos);
         res.json({ sucesso: true, resumo });
 
     } catch (erro) {

@@ -111,14 +111,24 @@ async function rodarVerificacaoAgora() {
 
     const botao = document.getElementById("btnRodarAgora");
     const mensagem = document.getElementById("mensagemVerificacao");
+    const campoIds = document.getElementById("idsParaTestar");
+
+    const textoIds = campoIds.value.trim();
+    const produtoIds = textoIds
+        ? textoIds.split(",").map(s => Number(s.trim())).filter(n => !isNaN(n))
+        : null;
 
     botao.disabled = true;
-    mensagem.textContent = "⏳ Rodando verificação... isso pode levar alguns minutos, dependendo de quantos produtos estão ativos.";
+    mensagem.textContent = produtoIds
+        ? `⏳ Rodando verificação em ${produtoIds.length} produto(s) específico(s)...`
+        : "⏳ Rodando verificação em todos os produtos ativos... isso pode levar alguns minutos.";
 
     try {
 
         const resposta = await fetch("/api/verificacao/rodar-agora", {
-            method: "POST"
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(produtoIds ? { produtoIds } : {})
         });
 
         const dados = await resposta.json();
@@ -126,7 +136,7 @@ async function rodarVerificacaoAgora() {
         if (dados.sucesso) {
 
             const r = dados.resumo;
-            mensagem.textContent = `✅ Concluído: ${r.totalVerificados} verificado(s), ${r.alteracoesEncontradas} alteração(ões) encontrada(s), ${r.falhas} falha(s).`;
+            mensagem.textContent = `✅ Concluído: ${r.totalVerificados} verificado(s), ${r.alteracoesEncontradas} alteração(ões), ${r.naoConseguiuAcessar} não confirmado(s) (link bloqueado/inacessível, nada foi alterado), ${r.falhas} falha(s).`;
             carregarAlteracoes();
 
         } else {

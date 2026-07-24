@@ -227,7 +227,16 @@ fs.watch(CONFIG_PATH, { persistent: true }, () => {
 
   // Verificação semanal de preço/disponibilidade dos produtos ativos
   // (domingo às 3h da manhã, fora do horário normal de envios)
+  // IMPORTANTE: só roda automaticamente se "verificacaoSemanalAtiva": true
+  // estiver no config.json. Por padrão fica DESLIGADO, até você confirmar
+  // manualmente (pelo botão "Rodar verificação agora") que está funcionando
+  // bem no seu catálogo.
   cron.schedule('0 3 * * 0', () => {
+    const configAtual = carregarConfig();
+    if (!configAtual.verificacaoSemanalAtiva) {
+        console.log('⏸️ Verificação semanal automática está desligada (verificacaoSemanalAtiva não está true no config.json). Pulando.');
+        return;
+    }
     console.log('🔎 Iniciando verificação semanal de preço/disponibilidade...');
     rodarVerificacaoSemanal().catch(erro => {
         console.error('❌ Erro na verificação semanal:', erro);
