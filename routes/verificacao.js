@@ -31,29 +31,44 @@ async function verificarProdutoUnico(ai, produto) {
 
     const prompt = `Acesse esta página de produto: ${produto.linkAfiliado}
 
-Sua tarefa tem duas partes:
+Leia o título e o preço atual do produto diretamente na página.
 
-1. Primeiro, avalie se você CONSEGUIU acessar e ler o conteúdo real da página do produto. Isso é diferente de "achar que está indisponível" — se a página não carregou, redirecionou para uma tela de verificação/erro/bloqueio, mostrou captcha, ou você não tem certeza do que está vendo, isso conta como NÃO CONSEGUIU ACESSAR, mesmo que pareça sutilmente com uma página de "produto esgotado".
-
-2. Só se você TEVE CERTEZA de que acessou a página real do produto, diga se ele está disponível para compra e qual o preço atual.
-
-REGRA CRÍTICA: nunca assuma "indisponível" como suposição ou chute. "Indisponível" só deve ser reportado se a própria página do produto mostrar EXPLICITAMENTE uma mensagem como "produto esgotado", "anúncio pausado", "produto não encontrado" ou equivalente. Qualquer dúvida = NÃO CONSEGUIU ACESSAR.
+Depois, verifique se existe alguma indicação EXPLÍCITA na própria página de que o produto não pode ser comprado agora — por exemplo textos como "produto esgotado", "anúncio pausado", "produto não encontrado" ou uma página de erro real. Se não houver nenhuma indicação assim, considere o produto disponível normalmente.
 
 Retorne APENAS este JSON, sem nenhum texto antes ou depois, sem marcadores de código:
 
 {
-  "conseguiuAcessar": true ou false,
-  "disponivel": true ou false ou null (null se conseguiuAcessar for false),
+  "conseguiuAcessar": true ou false (true se você conseguiu ler um título e preço reais da página; false só se a página realmente não carregou, foi bloqueada, ou mostrou captcha/erro),
+  "disponivel": true ou false (false apenas se a página mostrar explicitamente que o produto está esgotado/pausado/removido),
   "preco": número (preço atual, sem símbolo de moeda) ou null
 }`;
 
-    const resposta = await ai.models.generateContent({
+    const streamResponse = await ai.models.generateContentStream({
         model: 'gemini-3.5-flash',
         contents: prompt,
         config: { tools: [{ urlContext: {} }] }
     });
 
-    let texto = (resposta.text || '').trim();
+    let textoAcumulado = '';
+    let ultimoChunk = null;
+
+    for await (const chunk of streamResponse) {
+        textoAcumulado += chunk.text || '';
+        ultimoChunk = chunk;
+    }
+
+    // Log de diagnóstico: mostra o que a ferramenta de leitura de página
+    // realmente conseguiu buscar, segundo o próprio Gemini (não depende
+    // do que o modelo "acha" que aconteceu). Ajuda a diferenciar bloqueio
+    // real de acesso de uma resposta conservadora demais do modelo.
+    try {
+        const metadados = ultimoChunk?.candidates?.[0]?.urlContextMetadata;
+        console.log(`🔬 [diagnóstico] urlContextMetadata para "${produto.linkAfiliado}":`, JSON.stringify(metadados));
+    } catch (erroLog) {
+        console.log('🔬 [diagnóstico] Não foi possível ler urlContextMetadata:', erroLog.message);
+    }
+
+    let texto = textoAcumulado.trim();
     texto = texto.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
 
     return JSON.parse(texto);
