@@ -25,11 +25,14 @@ function obterChaveGemini() {
 
 // ======================================
 // Consulta a IA sobre UM produto: ainda está disponível? qual o preço atual?
-// (usa a mesma ferramenta de leitura de página já usada na importação por link)
+// Usa o "linkOriginal" (página direta do produto, sem afiliado) — já provamos
+// que os links de afiliado encurtados (ex: meli.la/xxx) bloqueiam esse tipo
+// de acesso automatizado, então essa verificação depende do linkOriginal
+// estar preenchido no cadastro do produto.
 // ======================================
 async function verificarProdutoUnico(ai, produto) {
 
-    const prompt = `Acesse esta página de produto: ${produto.linkAfiliado}
+    const prompt = `Acesse esta página de produto: ${produto.linkOriginal}
 
 Leia o título e o preço atual do produto diretamente na página.
 
@@ -63,7 +66,7 @@ Retorne APENAS este JSON, sem nenhum texto antes ou depois, sem marcadores de c�
     // real de acesso de uma resposta conservadora demais do modelo.
     try {
         const metadados = ultimoChunk?.candidates?.[0]?.urlContextMetadata;
-        console.log(`🔬 [diagnóstico] urlContextMetadata para "${produto.linkAfiliado}":`, JSON.stringify(metadados));
+        console.log(`🔬 [diagnóstico] urlContextMetadata para "${produto.linkOriginal}":`, JSON.stringify(metadados));
     } catch (erroLog) {
         console.log('🔬 [diagnóstico] Não foi possível ler urlContextMetadata:', erroLog.message);
     }
@@ -87,6 +90,7 @@ async function rodarVerificacaoSemanal(idsEspecificos) {
         totalVerificados: 0,
         alteracoesEncontradas: 0,
         naoConseguiuAcessar: 0,
+        semLinkOriginal: 0,
         falhas: 0,
         detalhes: []
     };
@@ -103,16 +107,20 @@ async function rodarVerificacaoSemanal(idsEspecificos) {
 
     const ai = new GoogleGenAI({ apiKey });
 
-    let produtosParaChecar = listarProdutosAtivos().filter(
-        p => p.linkAfiliado && p.linkAfiliado !== 'LINK_NAO_CONFIRMADO'
-    );
+    let produtosAtivos = listarProdutosAtivos();
 
     if (Array.isArray(idsEspecificos) && idsEspecificos.length > 0) {
         const idsSet = new Set(idsEspecificos.map(Number));
-        produtosParaChecar = produtosParaChecar.filter(p => idsSet.has(p.id));
+        produtosAtivos = produtosAtivos.filter(p => idsSet.has(p.id));
     }
 
-    console.log(`🔎 Verificação iniciada: ${produtosParaChecar.length} produto(s) para checar.`);
+    const produtosParaChecar = produtosAtivos.filter(
+        p => p.linkOriginal && p.linkOriginal.startsWith('http')
+    );
+
+    resumo.semLinkOriginal = produtosAtivos.length - produtosParaChecar.length;
+
+    console.log(`🔎 Verificação iniciada: ${produtosParaChecar.length} produto(s) para checar (${resumo.semLinkOriginal} pulado(s) por não ter link original cadastrado).`);
 
     for (const produto of produtosParaChecar) {
 
@@ -160,7 +168,7 @@ async function rodarVerificacaoSemanal(idsEspecificos) {
 
     }
 
-    console.log(`✅ Verificação concluída: ${resumo.totalVerificados} verificado(s), ${resumo.alteracoesEncontradas} alteração(ões), ${resumo.naoConseguiuAcessar} não confirmado(s), ${resumo.falhas} falha(s).`);
+    console.log(`✅ Verificação concluída: ${resumo.totalVerificados} verificado(s), ${resumo.alteracoesEncontradas} alteração(ões), ${resumo.naoConseguiuAcessar} não confirmado(s), ${resumo.semLinkOriginal} sem link original, ${resumo.falhas} falha(s).`);
 
     return resumo;
 

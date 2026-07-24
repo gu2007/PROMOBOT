@@ -1,4 +1,4 @@
-async function cadastrarProduto() {
+﻿async function cadastrarProduto() {
 
     const dados = {
 
@@ -12,7 +12,9 @@ async function cadastrarProduto() {
 
         precoAntigo: Number(document.getElementById("precoAntigo").value),
 
-        linkAfiliado: document.getElementById("linkAfiliado").value
+        linkAfiliado: document.getElementById("linkAfiliado").value,
+
+        linkOriginal: document.getElementById("linkOriginal").value
 
     };
 
@@ -46,6 +48,7 @@ async function cadastrarProduto() {
             document.getElementById("preco").value = "";
             document.getElementById("precoAntigo").value = "";
             document.getElementById("linkAfiliado").value = "";
+            document.getElementById("linkOriginal").value = "";
 
         } else {
 

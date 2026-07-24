@@ -1,4 +1,4 @@
-let todosOsProdutos = [];
+﻿let todosOsProdutos = [];
 
 async function carregarProdutos() {
 
@@ -68,6 +68,7 @@ function renderizarProdutos(produtos) {
             cartao.style.textAlign = "left";
 
             cartao.innerHTML = `
+                <p style="font-size: 11px; color: #999; margin-bottom: 5px;">ID: ${produto.id}</p>
                 <h3 style="font-size: 15px; margin-bottom: 10px; min-height: 40px;">${produto.titulo}</h3>
                 <p style="font-size: 13px; color: #666; margin-bottom: 5px;">📂 ${produto.categoria || "Sem categoria"}</p>
                 <p style="font-size: 20px; font-weight: bold; color: #005744; margin-bottom: 5px;">R$ ${produto.preco}</p>

@@ -136,7 +136,7 @@ async function rodarVerificacaoAgora() {
         if (dados.sucesso) {
 
             const r = dados.resumo;
-            mensagem.textContent = `✅ Concluído: ${r.totalVerificados} verificado(s), ${r.alteracoesEncontradas} alteração(ões), ${r.naoConseguiuAcessar} não confirmado(s) (link bloqueado/inacessível, nada foi alterado), ${r.falhas} falha(s).`;
+            mensagem.textContent = `✅ Concluído: ${r.totalVerificados} verificado(s), ${r.alteracoesEncontradas} alteração(ões), ${r.naoConseguiuAcessar} não confirmado(s) (link bloqueado/inacessível, nada foi alterado), ${r.semLinkOriginal} sem link original cadastrado (pulado), ${r.falhas} falha(s).`;
             carregarAlteracoes();
 
         } else {

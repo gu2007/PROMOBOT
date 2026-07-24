@@ -1,4 +1,4 @@
-const parametros = new URLSearchParams(window.location.search);
+﻿const parametros = new URLSearchParams(window.location.search);
 
 const id = parametros.get("id");
 
@@ -17,6 +17,7 @@ async function carregarProduto() {
         document.getElementById("preco").value = produto.preco;
         document.getElementById("precoAntigo").value = produto.precoAntigo;
         document.getElementById("linkAfiliado").value = produto.linkAfiliado;
+        document.getElementById("linkOriginal").value = produto.linkOriginal || "";
 
         const linkOriginalBotao = document.getElementById("linkOriginalBotao");
         const avisoLinkNaoConfirmado = document.getElementById("avisoLinkNaoConfirmado");
@@ -54,7 +55,9 @@ async function salvarProduto() {
 
         precoAntigo: Number(document.getElementById("precoAntigo").value),
 
-        linkAfiliado: document.getElementById("linkAfiliado").value
+        linkAfiliado: document.getElementById("linkAfiliado").value,
+
+        linkOriginal: document.getElementById("linkOriginal").value
 
     };
 

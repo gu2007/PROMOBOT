@@ -276,8 +276,11 @@ function renderizarResultados() {
                 <button type="button">🔍 Buscar produto no ${infoBusca.rotulo}</button>
             </a>
             <br><br>
-            <label>Cole aqui o link encontrado:</label>
+            <label>Cole aqui o link de afiliado (pra enviar no WhatsApp):</label>
             <input type="text" class="inputLinkProduto" data-indice="${indice}" placeholder="https://..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+            <br><br>
+            <label>Cole aqui o link original da página do produto (sem afiliado — usado na verificação semanal de preço):</label>
+            <input type="text" class="inputLinkOriginalProduto" data-indice="${indice}" placeholder="https://..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
         `;
 
         resultados.appendChild(div);
@@ -322,6 +325,9 @@ async function salvarSelecionados() {
         const campoLink = document.querySelector(`.inputLinkProduto[data-indice="${indice}"]`);
         const linkDigitado = campoLink ? campoLink.value.trim() : '';
 
+        const campoLinkOriginal = document.querySelector(`.inputLinkOriginalProduto[data-indice="${indice}"]`);
+        const linkOriginalDigitado = campoLinkOriginal ? campoLinkOriginal.value.trim() : '';
+
         const produtoParaSalvar = {
             marketplace: produto.marketplace,
             categoria: produto.categoria,
@@ -334,6 +340,7 @@ async function salvarSelecionados() {
             vendidos: produto.vendidos,
             imagem: null,
             linkAfiliado: linkDigitado || 'LINK_NAO_CONFIRMADO',
+            linkOriginal: linkOriginalDigitado || null,
             texto: produto.texto,
             ativo: false
         };
