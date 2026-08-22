@@ -80,7 +80,11 @@ Retorne APENAS este JSON, sem nenhum texto antes ou depois, sem marcadores de c�
     let texto = textoAcumulado.trim();
     texto = texto.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
 
-    return JSON.parse(texto);
+    const resultado = JSON.parse(texto);
+
+    console.log(`🔬 [diagnóstico] resultado completo da IA para produto "${produto.titulo.slice(0, 40)}":`, JSON.stringify(resultado));
+
+    return resultado;
 
 }
 
