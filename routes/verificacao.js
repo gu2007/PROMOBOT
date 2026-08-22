@@ -25,12 +25,15 @@ function obterChaveGemini() {
 
 // ======================================
 // Consulta a IA sobre UM produto: ainda está disponível? qual o preço atual?
+// e, se ainda não tivermos, qual a URL da foto principal do produto?
 // Usa o "linkOriginal" (página direta do produto, sem afiliado) — já provamos
-// que os links de afiliado encurtados (ex: meli.la/xxx) bloqueiam esse tipo
-// de acesso automatizado, então essa verificação depende do linkOriginal
-// estar preenchido no cadastro do produto.
+// que os links de afiliado encurtados (ex: meli.la/xxx, link.amazon/xxx)
+// bloqueiam esse tipo de acesso automatizado, então essa verificação depende
+// do linkOriginal estar preenchido no cadastro do produto.
 // ======================================
 async function verificarProdutoUnico(ai, produto) {
+
+    const precisaDeImagem = !produto.imagem;
 
     const prompt = `Acesse esta página de produto: ${produto.linkOriginal}
 
@@ -38,12 +41,15 @@ Leia o título e o preço atual do produto diretamente na página.
 
 Depois, verifique se existe alguma indicação EXPLÍCITA na própria página de que o produto não pode ser comprado agora — por exemplo textos como "produto esgotado", "anúncio pausado", "produto não encontrado" ou uma página de erro real. Se não houver nenhuma indicação assim, considere o produto disponível normalmente.
 
+${precisaDeImagem ? 'Além disso, encontre a URL absoluta (começando com http:// ou https://) da imagem/foto principal do produto na página (a foto de capa do anúncio). Isso é usado só de forma informativa, não precisa ter certeza absoluta — se não encontrar uma URL de imagem clara, retorne null nesse campo.' : ''}
+
 Retorne APENAS este JSON, sem nenhum texto antes ou depois, sem marcadores de código:
 
 {
   "conseguiuAcessar": true ou false (true se você conseguiu ler um título e preço reais da página; false só se a página realmente não carregou, foi bloqueada, ou mostrou captcha/erro),
   "disponivel": true ou false (false apenas se a página mostrar explicitamente que o produto está esgotado/pausado/removido),
-  "preco": número (preço atual, sem símbolo de moeda) ou null
+  "preco": número (preço atual, sem símbolo de moeda) ou null,
+  "imagemUrl": ${precisaDeImagem ? 'string com a URL da imagem principal, ou null se não encontrar' : 'null (não precisa buscar, já temos a imagem deste produto)'}
 }`;
 
     const streamResponse = await ai.models.generateContentStream({
@@ -91,6 +97,7 @@ async function rodarVerificacaoSemanal(idsEspecificos) {
         alteracoesEncontradas: 0,
         naoConseguiuAcessar: 0,
         semLinkOriginal: 0,
+        imagensCapturadas: 0,
         falhas: 0,
         detalhes: []
     };
@@ -139,8 +146,14 @@ async function rodarVerificacaoSemanal(idsEspecificos) {
             }
 
             const precoAntes = produto.preco;
+            const jaTinhaImagemAntes = !!produto.imagem;
 
             aplicarResultadoVerificacao(produto.id, resultado);
+
+            if (!jaTinhaImagemAntes && resultado.imagemUrl) {
+                resumo.imagensCapturadas++;
+                console.log(`🖼️ Produto #${produto.id} ganhou uma foto: ${produto.titulo.slice(0, 50)}`);
+            }
 
             if (resultado.disponivel === false) {
 
@@ -168,7 +181,7 @@ async function rodarVerificacaoSemanal(idsEspecificos) {
 
     }
 
-    console.log(`✅ Verificação concluída: ${resumo.totalVerificados} verificado(s), ${resumo.alteracoesEncontradas} alteração(ões), ${resumo.naoConseguiuAcessar} não confirmado(s), ${resumo.semLinkOriginal} sem link original, ${resumo.falhas} falha(s).`);
+    console.log(`✅ Verificação concluída: ${resumo.totalVerificados} verificado(s), ${resumo.alteracoesEncontradas} alteração(ões), ${resumo.imagensCapturadas} imagem(ns) capturada(s), ${resumo.naoConseguiuAcessar} não confirmado(s), ${resumo.semLinkOriginal} sem link original, ${resumo.falhas} falha(s).`);
 
     return resumo;
 

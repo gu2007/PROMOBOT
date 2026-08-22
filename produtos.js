@@ -309,7 +309,10 @@ const TOLERANCIA_MUDANCA_PRECO = 0.10;
 // Aplica o resultado da verificação semanal de um produto:
 // - se ficou indisponível: desativa o produto e marca pra revisão
 // - se o preço mudou de verdade: atualiza o preço sozinho e marca pra revisão
-// - se nada relevante mudou: não mexe em nada
+// - se a IA encontrou uma foto do produto e ainda não tínhamos: salva ela,
+//   sem gerar alerta na aba de revisão (não é uma "alteração" que precisa de
+//   atenção, é só um dado que estava faltando)
+// - se nada disso: não mexe em nada
 function aplicarResultadoVerificacao(id, resultado) {
 
     const produtos = carregarProdutos();
@@ -317,6 +320,18 @@ function aplicarResultadoVerificacao(id, resultado) {
     const produto = produtos.find(p => p.id === Number(id));
 
     if (!produto) return;
+
+    let houveMudancaSilenciosa = false;
+
+    if (
+        resultado.imagemUrl &&
+        typeof resultado.imagemUrl === 'string' &&
+        resultado.imagemUrl.startsWith('http') &&
+        produto.imagem !== resultado.imagemUrl
+    ) {
+        produto.imagem = resultado.imagemUrl;
+        houveMudancaSilenciosa = true;
+    }
 
     if (resultado.disponivel === false) {
 
@@ -348,6 +363,10 @@ function aplicarResultadoVerificacao(id, resultado) {
 
         }
 
+    }
+
+    if (houveMudancaSilenciosa) {
+        salvarProdutos(produtos);
     }
 
 }
