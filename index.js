@@ -77,7 +77,9 @@ async function enviarProduto(client, produto) {
   }
 
   // Sem imagem ou erro ao carregar -> envia só o texto
-  await client.sendMessage(GROUP_ID, texto);
+  // (linkPreview: true força a tentativa de gerar o preview automático do
+  // link, que às vezes falha silenciosamente na biblioteca do WhatsApp)
+  await client.sendMessage(GROUP_ID, texto, { linkPreview: true });
 }
 
 const client = new Client({
