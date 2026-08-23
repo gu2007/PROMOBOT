@@ -25,6 +25,32 @@ function obterChaveGemini() {
 }
 
 // ======================================
+// Adiciona um parâmetro único (baseado no horário atual) na URL, tentando
+// "enganar" qualquer cache que a ferramenta de leitura de página use por
+// endereço exato — fizemos testes e confirmamos que a mesma URL, consultada
+// em dias diferentes, retornou o preço IDÊNTICO mesmo o preço real tendo
+// mudado de verdade (forte indício de cache). Um parâmetro novo a cada
+// chamada faz a URL parecer "nunca vista antes".
+// ======================================
+function montarUrlSemCache(url) {
+
+    try {
+
+        const urlObj = new URL(url);
+        const marcador = `${Date.now()}${Math.floor(Math.random() * 1000000)}`;
+        urlObj.searchParams.set('_verificacaoPromobot', marcador);
+        return urlObj.toString();
+
+    } catch (erro) {
+
+        // Se a URL for inválida por algum motivo, usa ela do jeito que está
+        return url;
+
+    }
+
+}
+
+// ======================================
 // Consulta a IA sobre UM produto: ainda está disponível? qual o preço atual?
 // e, se ainda não tivermos, qual a URL da foto principal do produto?
 // Usa o "linkOriginal" (página direta do produto, sem afiliado) — já provamos
@@ -36,7 +62,9 @@ async function verificarProdutoUnico(ai, produto) {
 
     const precisaDeImagem = !produto.imagem;
 
-    const prompt = `Acesse esta página de produto: ${produto.linkOriginal}
+    const urlParaLeitura = montarUrlSemCache(produto.linkOriginal);
+
+    const prompt = `Acesse esta página de produto: ${urlParaLeitura}
 
 Leia o TÍTULO e o PREÇO ATUAL do produto diretamente na página, com muito cuidado pra não confundir:
 
@@ -78,7 +106,7 @@ Retorne APENAS este JSON, sem nenhum texto antes ou depois, sem marcadores de c�
     // real de acesso de uma resposta conservadora demais do modelo.
     try {
         const metadados = ultimoChunk?.candidates?.[0]?.urlContextMetadata;
-        console.log(`🔬 [diagnóstico] urlContextMetadata para "${produto.linkOriginal}":`, JSON.stringify(metadados));
+        console.log(`🔬 [diagnóstico] urlContextMetadata para "${urlParaLeitura}":`, JSON.stringify(metadados));
     } catch (erroLog) {
         console.log('🔬 [diagnóstico] Não foi possível ler urlContextMetadata:', erroLog.message);
     }
