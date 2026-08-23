@@ -7,7 +7,6 @@ async function carregarProduto() {
     try {
 
         const resposta = await fetch(`/api/produtos/${id}`);
-
         const produto = await resposta.json();
 
         document.getElementById("id").value = produto.id;
@@ -18,6 +17,9 @@ async function carregarProduto() {
         document.getElementById("precoAntigo").value = produto.precoAntigo;
         document.getElementById("linkAfiliado").value = produto.linkAfiliado;
         document.getElementById("linkOriginal").value = produto.linkOriginal || "";
+        document.getElementById("imagem").value = produto.imagem || "";
+
+        atualizarPratinhaImagem();
 
         const linkOriginalBotao = document.getElementById("linkOriginalBotao");
         const avisoLinkNaoConfirmado = document.getElementById("avisoLinkNaoConfirmado");
@@ -44,37 +46,24 @@ async function carregarProduto() {
 async function salvarProduto() {
 
     const produto = {
-
         marketplace: document.getElementById("marketplace").value,
-
         categoria: document.getElementById("categoria").value,
-
         titulo: document.getElementById("titulo").value,
-
         preco: Number(document.getElementById("preco").value),
-
         precoAntigo: Number(document.getElementById("precoAntigo").value),
-
         linkAfiliado: document.getElementById("linkAfiliado").value,
-
-        linkOriginal: document.getElementById("linkOriginal").value
-
+        linkOriginal: document.getElementById("linkOriginal").value,
+        imagem: document.getElementById("imagem").value || null
     };
 
     try {
 
         const resposta = await fetch(`/api/produtos/${id}`, {
-
             method: "PUT",
-
             headers: {
-
                 "Content-Type": "application/json"
-
             },
-
             body: JSON.stringify(produto)
-
         });
 
         const resultado = await resposta.json();
@@ -85,7 +74,9 @@ async function salvarProduto() {
 
         } else {
 
-            document.getElementById("mensagem").textContent = resultado.mensagem;
+            const mensagem = document.getElementById("mensagem");
+            mensagem.className = "mensagemFormulario erro";
+            mensagem.textContent = resultado.mensagem;
 
         }
 
@@ -97,8 +88,32 @@ async function salvarProduto() {
 
 }
 
+// ======================================
+// Mostra uma pré-visualização da imagem colada, pra confirmar visualmente
+// que o link é mesmo de uma foto válida antes de salvar.
+// ======================================
+function atualizarPratinhaImagem() {
+
+    const url = document.getElementById("imagem").value.trim();
+    const pratinha = document.getElementById("pratinhaImagem");
+    const foto = document.getElementById("pratinhaImagemFoto");
+
+    if (!url) {
+        pratinha.style.display = "none";
+        return;
+    }
+
+    foto.src = url;
+    pratinha.style.display = "flex";
+
+}
+
 document
     .getElementById("salvar")
     .addEventListener("click", salvarProduto);
+
+document
+    .getElementById("imagem")
+    .addEventListener("input", atualizarPratinhaImagem);
 
 carregarProduto();

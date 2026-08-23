@@ -521,3 +521,112 @@ button.primario:hover{
     padding:7px 6px;
     font-size:12px;
 }
+
+/* ===== Formulários (Novo Produto / Editar Produto) ===== */
+
+.formulario{
+    background:var(--cor-superficie);
+    border:1px solid var(--cor-borda);
+    border-radius:var(--raio-grande);
+    padding:24px;
+    box-shadow:var(--sombra-card);
+    max-width:720px;
+}
+
+.campoFormulario{
+    margin-bottom:16px;
+}
+
+.campoFormulario label{
+    display:block;
+    font-size:13px;
+    font-weight:600;
+    color:var(--cor-texto-secundario);
+    margin-bottom:6px;
+}
+
+.campoFormulario input, .campoFormulario select{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--cor-borda-forte);
+    border-radius:var(--raio);
+    font-size:14px;
+    background:var(--cor-superficie);
+    font-family:inherit;
+    color:var(--cor-texto);
+}
+
+.campoFormulario input:focus, .campoFormulario select:focus{
+    outline:none;
+    border-color:var(--cor-primaria);
+}
+
+.campoFormulario small{
+    display:block;
+    font-size:12px;
+    color:var(--cor-texto-terciario);
+    margin-top:4px;
+}
+
+.linhaFormulario{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+}
+
+.acoesFormulario{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    margin-top:8px;
+    flex-wrap:wrap;
+}
+
+.mensagemFormulario{
+    margin-top:12px;
+    font-size:14px;
+}
+
+.mensagemFormulario.sucesso{ color:var(--cor-sucesso); }
+.mensagemFormulario.erro{ color:var(--cor-perigo); }
+
+.avisoFormulario{
+    background:var(--cor-aviso-fundo);
+    color:#92400E;
+    padding:10px 14px;
+    border-radius:var(--raio);
+    font-size:13px;
+    margin-bottom:16px;
+}
+
+.pratinhaImagem{
+    width:100%;
+    max-width:160px;
+    aspect-ratio:1/1;
+    background:var(--cor-superficie-2);
+    border:1px solid var(--cor-borda);
+    border-radius:var(--raio);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    margin-top:8px;
+}
+
+.pratinhaImagem img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+}
+
+@media (max-width:600px){
+
+    .linhaFormulario{
+        grid-template-columns:1fr;
+    }
+
+    .formulario{
+        padding:18px;
+    }
+
+}

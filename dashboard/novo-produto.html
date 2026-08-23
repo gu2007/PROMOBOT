@@ -19,32 +19,31 @@
 
     <div class="overlayMenu" id="overlayMenu"></div>
 
-
     <aside class="sidebar" id="sidebar">
 
         <h2>PROMOBOT</h2>
 
         <nav>
 
-            <a href="/dashboard">🏠 Dashboard</a>
+            <a href="/dashboard">Dashboard</a>
 
-            <a href="/produtos">📦 Produtos</a>
+            <a href="/produtos" class="ativo">Produtos</a>
 
-            <a href="/novo-produto">➕ Novo Produto</a>
+            <a href="/novo-produto">Novo Produto</a>
 
-            <a href="/importar-ia">📥 Importações</a>
+            <a href="/importar-ia">Importações</a>
 
-            <a href="/duplicados">⚠️ Duplicados</a>
+            <a href="/duplicados">Duplicados</a>
 
-            <a href="/alteracoes">🔄 Alterações</a>
+            <a href="/alteracoes">Alterações</a>
 
-            <a href="#">📤 Divulgações</a>
+            <a href="#">Divulgações</a>
 
-            <a href="/configuracoes">⚙️ Configurações</a>
+            <a href="/configuracoes">Configurações</a>
 
-            <a href="#">📊 Estatísticas</a>
+            <a href="#">Estatísticas</a>
 
-            <a href="#">📜 Logs</a>
+            <a href="#">Logs</a>
 
         </nav>
 
@@ -52,69 +51,71 @@
 
     <main>
 
-        <h1>Cadastrar Produto</h1>
+        <h1 style="margin-bottom:20px;">Cadastrar produto</h1>
 
-        <div class="card">
+        <div class="formulario">
 
-            <label>Marketplace</label>
+            <div class="linhaFormulario">
 
-            <select id="marketplace">
+                <div class="campoFormulario">
+                    <label for="marketplace">Marketplace</label>
+                    <select id="marketplace">
+                        <option>Mercado Livre</option>
+                        <option>Shopee</option>
+                        <option>Amazon</option>
+                    </select>
+                </div>
 
-                <option>Mercado Livre</option>
-                <option>Shopee</option>
-                <option>Amazon</option>
+                <div class="campoFormulario">
+                    <label for="categoria">Categoria</label>
+                    <input type="text" id="categoria" placeholder="Ex.: Ferramentas automotivas">
+                </div>
 
-            </select>
+            </div>
 
-            <label>Categoria</label>
+            <div class="campoFormulario">
+                <label for="titulo">Título</label>
+                <input type="text" id="titulo" placeholder="Nome completo do produto">
+            </div>
 
-            <input
-                type="text"
-                id="categoria"
-                placeholder="Ex.: Ferramentas Automotivas">
+            <div class="linhaFormulario">
 
-            <label>Título</label>
+                <div class="campoFormulario">
+                    <label for="preco">Preço atual</label>
+                    <input type="number" id="preco" step="0.01" placeholder="0,00">
+                </div>
 
-            <input
-                type="text"
-                id="titulo">
+                <div class="campoFormulario">
+                    <label for="precoAntigo">Preço antigo</label>
+                    <input type="number" id="precoAntigo" step="0.01" placeholder="0,00">
+                </div>
 
-            <label>Preço Atual</label>
+            </div>
 
-            <input
-                type="number"
-                id="preco"
-                step="0.01">
+            <div class="campoFormulario">
+                <label for="linkAfiliado">Link de afiliado</label>
+                <input type="text" id="linkAfiliado" placeholder="Link que vai para o WhatsApp">
+            </div>
 
-            <label>Preço Antigo</label>
+            <div class="campoFormulario">
+                <label for="linkOriginal">Link original do produto</label>
+                <input type="text" id="linkOriginal" placeholder="Ex: https://www.mercadolivre.com.br/.../p/MLB...">
+                <small>Página direta, sem afiliado — usada pela verificação semanal de preço.</small>
+            </div>
 
-            <input
-                type="number"
-                id="precoAntigo"
-                step="0.01">
+            <div class="campoFormulario">
+                <label for="imagem">Imagem do produto (URL)</label>
+                <input type="text" id="imagem" placeholder="Cole o endereço da foto do produto">
+                <small>Clique com o botão direito na foto do produto no site e escolha "Copiar endereço da imagem".</small>
+                <div class="pratinhaImagem" id="pratinhaImagem" style="display:none;">
+                    <img id="pratinhaImagemFoto" src="" alt="">
+                </div>
+            </div>
 
-            <label>Link de Afiliado</label>
-
-            <input
-                type="text"
-                id="linkAfiliado">
-
-            <label>Link Original do Produto (página direta, sem afiliado — usado pela verificação semanal de preço)</label>
-
-            <input
-                type="text"
-                id="linkOriginal"
-                placeholder="Ex: https://www.mercadolivre.com.br/.../p/MLB...">
-
-            <br><br>
-
-            <button id="cadastrar">
-
-                Cadastrar Produto
-
-            </button>
-
-            <p id="mensagem"></p>
+            <div class="acoesFormulario">
+                <button id="cadastrar" class="primario">Cadastrar produto</button>
+                <span id="mensagem" class="mensagemFormulario"></span>
+            </div>
 
         </div>
 
