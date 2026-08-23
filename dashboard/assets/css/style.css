@@ -630,3 +630,58 @@ button.primario:hover{
     }
 
 }
+
+/* ===== Menu agrupado (Produtos e sub-itens) ===== */
+
+.grupoMenu{
+    margin-bottom:2px;
+}
+
+.grupoMenu summary{
+    list-style:none;
+    cursor:pointer;
+    padding:11px 12px;
+    border-radius:8px;
+    font-size:14px;
+    font-weight:500;
+    color:#C9D3CE;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    user-select:none;
+    transition:background .15s, color .15s;
+}
+
+.grupoMenu summary::-webkit-details-marker{
+    display:none;
+}
+
+.grupoMenu summary:hover{
+    background:rgba(255,255,255,.08);
+    color:#FFFFFF;
+}
+
+.grupoMenu summary::after{
+    content:"›";
+    transform:rotate(90deg);
+    transition:transform .15s;
+    font-size:16px;
+    line-height:1;
+}
+
+.grupoMenu[open] summary::after{
+    transform:rotate(270deg);
+}
+
+.submenu{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    padding-left:14px;
+    margin-top:2px;
+}
+
+.submenu a{
+    font-size:13px;
+    padding:9px 12px;
+}
