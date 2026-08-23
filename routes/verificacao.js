@@ -58,7 +58,7 @@ function montarUrlSemCache(url) {
 // bloqueiam esse tipo de acesso automatizado, então essa verificação depende
 // do linkOriginal estar preenchido no cadastro do produto.
 // ======================================
-async function verificarProdutoUnico(ai, produto) {
+async function verificarProdutoUnico(ai, produto, onProgresso) {
 
     const precisaDeImagem = !produto.imagem;
 
@@ -85,6 +85,10 @@ Retorne APENAS este JSON, sem nenhum texto antes ou depois, sem marcadores de c�
   "preco": número (preço à vista atual, sem símbolo de moeda, sem ser valor de parcela) ou null,
   "imagemUrl": ${precisaDeImagem ? 'string com a URL da imagem principal, ou null se não encontrar' : 'null (não precisa buscar, já temos a imagem deste produto)'}
 }`;
+
+    if (onProgresso) {
+        onProgresso({ tipo: 'prompt', produtoId: produto.id, texto: prompt });
+    }
 
     const streamResponse = await ai.models.generateContentStream({
         model: 'gemini-3.5-flash',
@@ -187,7 +191,7 @@ async function rodarVerificacaoSemanal(idsEspecificos, onProgresso) {
 
         try {
 
-            const resultado = await verificarProdutoUnico(ai, produto);
+            const resultado = await verificarProdutoUnico(ai, produto, onProgresso);
 
             resumo.totalVerificados++;
 

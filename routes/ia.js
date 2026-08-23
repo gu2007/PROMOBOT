@@ -210,6 +210,8 @@ router.post('/extrair', async (req, res) => {
 
         const prompt = `Acesse esta página do Mercado Livre: ${link}\n\n${montarInstrucoesFormato()}`;
 
+        enviarEvento(res, 'prompt', { texto: prompt });
+
         const textoResposta = await chamarGeminiComStreamETentativas(ai, {
             contents: prompt,
             config: { tools: [{ urlContext: {} }] }
@@ -287,6 +289,8 @@ router.post('/extrair-arquivo', upload.single('arquivo'), async (req, res) => {
 
             const prompt = `Aqui está o conteúdo de um documento com uma lista de produtos:\n\n${textoDocumento}\n\n${montarInstrucoesFormato()}`;
 
+            enviarEvento(res, 'prompt', { texto: prompt });
+
             params = { contents: prompt };
 
         } else {
@@ -296,13 +300,17 @@ router.post('/extrair-arquivo', upload.single('arquivo'), async (req, res) => {
 
             const base64Pdf = req.file.buffer.toString('base64');
 
+            const textoInstrucoes = `Aqui está um documento com uma lista de produtos.\n\n${montarInstrucoesFormato()}`;
+
+            enviarEvento(res, 'prompt', { texto: `[Arquivo PDF anexado em base64, omitido aqui por ser muito grande]\n\n${textoInstrucoes}` });
+
             params = {
                 contents: [
                     {
                         role: 'user',
                         parts: [
                             { inlineData: { mimeType: 'application/pdf', data: base64Pdf } },
-                            { text: `Aqui está um documento com uma lista de produtos.\n\n${montarInstrucoesFormato()}` }
+                            { text: textoInstrucoes }
                         ]
                     }
                 ]
@@ -364,6 +372,8 @@ router.post('/extrair-texto', async (req, res) => {
         const ai = new GoogleGenAI({ apiKey });
 
         const prompt = `Aqui está um texto copiado de uma página de produtos:\n\n${texto}\n\n${montarInstrucoesFormato()}`;
+
+        enviarEvento(res, 'prompt', { texto: prompt });
 
         const textoResposta = await chamarGeminiComStreamETentativas(ai, {
             contents: prompt

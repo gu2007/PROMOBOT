@@ -37,25 +37,51 @@
         </nav>
     </aside>
     <main>
-        <h1>Configurações</h1>
-        <div class="card">
-            <label>Nicho</label>
-            <input id="nicho" type="text">
-            <label>Horário Inicial</label>
-            <input id="horarioInicio" type="number" min="0" max="23">
-            <label>Horário Final</label>
-            <input id="horarioFim" type="number" min="0" max="23">
-            <label>Produtos por Hora</label>
-            <input id="produtosPorHora" type="number" min="1">
-            <label>Repetir produto após quantas horas</label>
-            <input id="intervaloRepeticaoHoras" type="number" min="1">
-            <br><br>
-            <br><br>
-            <button id="salvar">
-                Salvar Configurações
-            </button>
-            <p id="mensagem"></p>
+
+        <h1 style="margin-bottom:20px;">Configurações</h1>
+
+        <div class="formulario">
+
+            <div class="campoFormulario">
+                <label for="nicho">Nicho</label>
+                <input id="nicho" type="text">
+            </div>
+
+            <div class="linhaFormulario">
+
+                <div class="campoFormulario">
+                    <label for="horarioInicio">Horário inicial</label>
+                    <input id="horarioInicio" type="number" min="0" max="23">
+                </div>
+
+                <div class="campoFormulario">
+                    <label for="horarioFim">Horário final</label>
+                    <input id="horarioFim" type="number" min="0" max="23">
+                </div>
+
+            </div>
+
+            <div class="linhaFormulario">
+
+                <div class="campoFormulario">
+                    <label for="produtosPorHora">Produtos por hora</label>
+                    <input id="produtosPorHora" type="number" min="1">
+                </div>
+
+                <div class="campoFormulario">
+                    <label for="intervaloRepeticaoHoras">Repetir produto após (horas)</label>
+                    <input id="intervaloRepeticaoHoras" type="number" min="1">
+                </div>
+
+            </div>
+
+            <div class="acoesFormulario">
+                <button id="salvar" class="primario">Salvar configurações</button>
+                <span id="mensagem" class="mensagemFormulario"></span>
+            </div>
+
         </div>
+
     </main>
     <script src="assets/js/configuracoes.js"></script>
     <script src="assets/js/menu.js"></script>

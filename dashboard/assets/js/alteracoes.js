@@ -22,18 +22,15 @@ function renderizarAlteracoes(alteracoes) {
     container.innerHTML = "";
 
     if (alteracoes.length === 0) {
-        container.innerHTML = "<p>✅ Nenhuma alteração pendente de revisão no momento.</p>";
+        container.innerHTML = "<p style='color:var(--cor-texto-secundario);'>Nenhuma alteração pendente de revisão no momento.</p>";
         return;
     }
 
     alteracoes.forEach(produto => {
 
         const bloco = document.createElement("div");
-        bloco.style.background = "white";
-        bloco.style.borderRadius = "12px";
-        bloco.style.padding = "20px";
-        bloco.style.marginBottom = "20px";
-        bloco.style.boxShadow = "0 3px 12px rgba(0,0,0,.08)";
+        bloco.className = "card";
+        bloco.style.marginBottom = "16px";
 
         const ehIndisponivel = produto.tipoAlteracao === "indisponivel";
         const ehSugestao = produto.tipoAlteracao === "preco_sugerido";
@@ -42,38 +39,39 @@ function renderizarAlteracoes(alteracoes) {
             ? new Date(produto.dataVerificacao).toLocaleString("pt-BR")
             : "-";
 
-        let rotulo = "💰 PREÇO ATUALIZADO AUTOMATICAMENTE";
-        let corpo = `<p style="font-size: 16px;">Preço anterior: <s>R$ ${produto.precoAnterior}</s> → Preço atual: <strong style="color:#005744;">R$ ${produto.preco}</strong></p>`;
-        let botoesExtras = `<button onclick="marcarComoRevisado(${produto.id})">✅ Marcar como revisado</button>`;
+        let rotulo = "PREÇO ATUALIZADO AUTOMATICAMENTE";
+        let classeBadge = "badge-sucesso";
+        let corpo = `<p style="font-size: 16px; margin-top:8px;">Preço anterior: <s>R$ ${produto.precoAnterior}</s> → Preço atual: <strong style="color:var(--cor-primaria);">R$ ${produto.preco}</strong></p>`;
+        let botoesExtras = `<button onclick="marcarComoRevisado(${produto.id})">Marcar como revisado</button>`;
 
         if (ehIndisponivel) {
 
-            rotulo = "🔴 PRODUTO FICOU INDISPONÍVEL (desativado)";
-            corpo = `<p style="font-size: 14px; color: #c0392b;">Produto marcado como indisponível/esgotado pela verificação. Confira o link antes de reativar.</p>`;
+            rotulo = "PRODUTO FICOU INDISPONÍVEL (desativado)";
+            classeBadge = "badge-perigo";
+            corpo = `<p style="font-size: 14px; color: var(--cor-perigo); margin-top:8px;">Produto marcado como indisponível/esgotado pela verificação. Confira o link antes de reativar.</p>`;
 
         } else if (ehSugestao) {
 
-            rotulo = "🟡 DIFERENÇA GRANDE DE PREÇO — PRECISA DA SUA CONFIRMAÇÃO";
-            corpo = `<p style="font-size: 16px;">Preço atual no sistema: <strong>R$ ${produto.preco}</strong> → IA encontrou: <strong style="color:#c07800;">R$ ${produto.precoSugerido}</strong></p><p style="font-size: 13px; color: #666;">Diferença grande demais pra aplicar sozinho — confira o link antes de confirmar.</p>`;
+            rotulo = "DIFERENÇA GRANDE DE PREÇO — PRECISA DA SUA CONFIRMAÇÃO";
+            classeBadge = "badge-aviso";
+            corpo = `<p style="font-size: 16px; margin-top:8px;">Preço atual no sistema: <strong>R$ ${produto.preco}</strong> → IA encontrou: <strong style="color:var(--cor-aviso);">R$ ${produto.precoSugerido}</strong></p><p style="font-size: 13px; color: var(--cor-texto-secundario);">Diferença grande demais pra aplicar sozinho — confira o link antes de confirmar.</p>`;
             botoesExtras = `
-                <button onclick="aplicarSugestao(${produto.id}, ${produto.precoSugerido})">✅ Aplicar esse preço</button>
-                <button onclick="marcarComoRevisado(${produto.id})">🚫 Ignorar sugestão</button>
+                <button onclick="aplicarSugestao(${produto.id}, ${produto.precoSugerido})" class="primario">Aplicar esse preço</button>
+                <button onclick="marcarComoRevisado(${produto.id})">Ignorar sugestão</button>
             `;
 
         }
 
         bloco.innerHTML = `
-            <p style="font-size: 12px; color: #999; margin-bottom: 5px;">
-                ${rotulo}
-                &nbsp;·&nbsp; verificado em ${dataFormatada}
-            </p>
-            <h3 style="font-size: 15px; margin-bottom: 10px;">${produto.titulo}</h3>
-            <p style="font-size: 13px; color: #666;">🛒 ${produto.marketplace || "-"}</p>
+            <span class="badge ${classeBadge}" style="margin-bottom:8px;">${rotulo}</span>
+            <p style="font-size: 12px; color: var(--cor-texto-terciario); margin-top:6px;">Verificado em ${dataFormatada}</p>
+            <h3 style="font-size: 15px; margin-top:8px; margin-bottom: 4px;">${produto.titulo}</h3>
+            <p style="font-size: 13px; color: var(--cor-texto-secundario);">${produto.marketplace || "-"}</p>
             ${corpo}
             <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
-                <a href="${produto.linkOriginal || produto.linkAfiliado}" target="_blank"><button type="button">🔗 Abrir produto</button></a>
+                <a href="${produto.linkOriginal || produto.linkAfiliado}" target="_blank"><button type="button" class="botaoSecundario">Abrir produto</button></a>
                 ${botoesExtras}
-                <button onclick="editarProduto(${produto.id})">✏️ Editar</button>
+                <button onclick="editarProduto(${produto.id})">Editar</button>
             </div>
         `;
 
@@ -164,33 +162,74 @@ function editarProduto(id) {
 }
 
 // ======================================
-// Rótulos amigáveis pra cada tipo de resultado, usados no log em tempo real
+// Rótulos amigáveis + o "tipo" visual (cor) de cada resultado, usados no
+// log de atividade em tempo real.
 // ======================================
 function descreverResultado(evento) {
 
     switch (evento.resultadoTipo) {
 
         case 'preco_atualizado':
-            return `💰 preço atualizado: R$${evento.precoAntes} → R$${evento.precoDepois}`;
+            return `preço atualizado: R$${evento.precoAntes} → R$${evento.precoDepois}`;
 
         case 'sugestao_pendente':
-            return `🟡 diferença grande de preço (R$${evento.precoAntes} → R$${evento.precoDepois}), aguardando sua confirmação`;
+            return `diferença grande de preço (R$${evento.precoAntes} → R$${evento.precoDepois}), aguardando sua confirmação`;
 
         case 'indisponivel':
-            return `🔴 ficou indisponível, desativado`;
+            return `ficou indisponível, desativado`;
 
         case 'nao_confirmado':
-            return `ℹ️ não confirmado (link bloqueado/inacessível), nada foi alterado`;
+            return `não confirmado (link bloqueado/inacessível), nada foi alterado`;
 
         case 'falha':
-            return `❌ falha: ${evento.mensagemErro || 'erro desconhecido'}`;
+            return `falha: ${evento.mensagemErro || 'erro desconhecido'}`;
 
         case 'sem_mudanca':
         default:
-            return `✅ sem alterações`;
+            return `sem alterações`;
 
     }
 
+}
+
+function tipoLogParaResultado(resultadoTipo) {
+
+    switch (resultadoTipo) {
+        case 'preco_atualizado': return 'sucesso';
+        case 'sugestao_pendente': return 'aviso';
+        case 'indisponivel': return 'aviso';
+        case 'falha': return 'erro';
+        default: return 'info';
+    }
+
+}
+
+// ======================================
+// Funções do log de atividade visual (substituem o antigo terminal preto):
+// linhas de status coloridas por tipo, e um bloco recolhível com o prompt
+// que foi enviado à IA pra cada produto verificado.
+// ======================================
+function adicionarLinhaLog(texto, tipo) {
+    const areaStreaming = document.getElementById('areaStreaming');
+    const linha = document.createElement('div');
+    linha.className = `linhaLog linhaLog-${tipo || 'info'}`;
+    linha.textContent = texto;
+    areaStreaming.appendChild(linha);
+    areaStreaming.scrollTop = areaStreaming.scrollHeight;
+}
+
+function mostrarPrompt(texto) {
+    const areaStreaming = document.getElementById('areaStreaming');
+    const bloco = document.createElement('details');
+    bloco.className = 'blocoPrompt';
+    const resumo = document.createElement('summary');
+    resumo.textContent = 'Ver prompt enviado à IA';
+    const pre = document.createElement('pre');
+    pre.textContent = texto;
+    bloco.appendChild(resumo);
+    bloco.appendChild(pre);
+    areaStreaming.appendChild(bloco);
+    areaStreaming.scrollTop = areaStreaming.scrollHeight;
 }
 
 // ======================================
@@ -211,9 +250,12 @@ async function rodarVerificacaoAgora() {
         : null;
 
     botao.disabled = true;
+    mensagem.className = "mensagemFormulario";
     mensagem.textContent = "";
     areaStreaming.style.display = "block";
-    areaStreaming.textContent = "⏳ Iniciando verificação...\n";
+    areaStreaming.innerHTML = "";
+
+    adicionarLinhaLog("Iniciando verificação...", "info");
 
     try {
 
@@ -224,7 +266,7 @@ async function rodarVerificacaoAgora() {
         });
 
         if (!resposta.ok || !resposta.body) {
-            areaStreaming.textContent += "\n❌ Erro ao conectar com o servidor.\n";
+            adicionarLinhaLog("Erro ao conectar com o servidor.", "erro");
             botao.disabled = false;
             return;
         }
@@ -257,28 +299,32 @@ async function rodarVerificacaoAgora() {
                 if (tipo === "progresso") {
 
                     if (dados.tipo === "inicio") {
-                        areaStreaming.textContent += `ℹ️ ${dados.totalParaChecar} produto(s) para checar (${dados.semLinkOriginal} pulado(s) sem link original).\n\n`;
+                        adicionarLinhaLog(`${dados.totalParaChecar} produto(s) para checar (${dados.semLinkOriginal} pulado(s) sem link original).`, "info");
+                    }
+
+                    if (dados.tipo === "prompt") {
+                        mostrarPrompt(dados.texto);
                     }
 
                     if (dados.tipo === "produto") {
-                        areaStreaming.textContent += `#${dados.produtoId} ${dados.titulo.slice(0, 50)} — ${descreverResultado(dados)}\n`;
+                        adicionarLinhaLog(`#${dados.produtoId} ${dados.titulo.slice(0, 50)} — ${descreverResultado(dados)}`, tipoLogParaResultado(dados.resultadoTipo));
                     }
 
                     if (dados.tipo === "final") {
                         const r = dados.resumo;
-                        areaStreaming.textContent += `\n✅ Concluído: ${r.totalVerificados} verificado(s), ${r.alteracoesEncontradas} alteração(ões) aplicada(s), ${r.sugestoesPendentes} sugestão(ões) aguardando confirmação, ${r.imagensCapturadas} imagem(ns) capturada(s), ${r.naoConseguiuAcessar} não confirmado(s), ${r.semLinkOriginal} sem link original, ${r.falhas} falha(s).\n`;
-                        mensagem.textContent = "✅ Verificação concluída — veja o resultado detalhado acima e a lista abaixo.";
+                        adicionarLinhaLog(`Concluído: ${r.totalVerificados} verificado(s), ${r.alteracoesEncontradas} alteração(ões) aplicada(s), ${r.sugestoesPendentes} sugestão(ões) aguardando confirmação, ${r.imagensCapturadas} imagem(ns) capturada(s), ${r.naoConseguiuAcessar} não confirmado(s), ${r.semLinkOriginal} sem link original, ${r.falhas} falha(s).`, "sucesso");
+                        mensagem.className = "mensagemFormulario sucesso";
+                        mensagem.textContent = "Verificação concluída — veja o resultado detalhado acima e a lista abaixo.";
                         carregarAlteracoes();
                     }
 
                 }
 
                 if (tipo === "erro") {
-                    areaStreaming.textContent += `\n❌ Erro: ${dados.mensagem}\n`;
-                    mensagem.textContent = "❌ A verificação parou por causa de um erro.";
+                    adicionarLinhaLog(`Erro: ${dados.mensagem}`, "erro");
+                    mensagem.className = "mensagemFormulario erro";
+                    mensagem.textContent = "A verificação parou por causa de um erro.";
                 }
-
-                areaStreaming.scrollTop = areaStreaming.scrollHeight;
 
             }
 
@@ -286,8 +332,9 @@ async function rodarVerificacaoAgora() {
 
     } catch (erro) {
 
-        areaStreaming.textContent += `\n❌ Erro de conexão: ${erro.message}\n`;
-        mensagem.textContent = "❌ Erro de conexão.";
+        adicionarLinhaLog(`Erro de conexão: ${erro.message}`, "erro");
+        mensagem.className = "mensagemFormulario erro";
+        mensagem.textContent = "Erro de conexão.";
 
     }
 

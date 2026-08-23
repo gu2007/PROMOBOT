@@ -52,19 +52,20 @@
 
     <main>
 
-        <h1>🔄 Alterações de Preço e Disponibilidade</h1>
+        <h1 style="margin-bottom:8px;">Alterações de preço e disponibilidade</h1>
 
-        <p style="color: #666; margin-bottom: 20px;">Toda semana, o sistema confere se o preço e a disponibilidade dos produtos ativos ainda batem. Diferenças pequenas de preço: corrigidas automaticamente. Diferenças grandes: só sugeridas, aguardando sua confirmação. Produto sumiu/esgotou: desativado automaticamente. Tudo isso aparece aqui pra você revisar.</p>
+        <p style="color: var(--cor-texto-secundario); margin-bottom: 20px;">Toda semana, o sistema confere se o preço e a disponibilidade dos produtos ativos ainda batem. Diferenças pequenas de preço: corrigidas automaticamente. Diferenças grandes: só sugeridas, aguardando sua confirmação. Produto sumiu/esgotou: desativado automaticamente. Tudo isso aparece aqui pra você revisar.</p>
 
-        <div style="margin-bottom: 20px;">
-            <label>ID(s) de produto pra testar (opcional, separados por vírgula — ex: 12,15). Deixe vazio pra rodar em todos os produtos ativos.</label>
-            <input type="text" id="idsParaTestar" placeholder="Ex: 12, 15" style="width: 100%; max-width: 300px; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-top: 5px;">
+        <div class="campoFormulario" style="max-width:340px;">
+            <label for="idsParaTestar">ID(s) de produto pra testar (opcional)</label>
+            <input type="text" id="idsParaTestar" placeholder="Ex: 12, 15">
+            <small>Separados por vírgula. Deixe vazio pra rodar em todos os produtos ativos.</small>
         </div>
 
-        <button id="btnRodarAgora" style="margin-bottom: 20px;">▶️ Rodar verificação agora</button>
-        <p id="mensagemVerificacao"></p>
+        <button id="btnRodarAgora" class="primario" style="margin-bottom: 20px;">Rodar verificação agora</button>
+        <p id="mensagemVerificacao" class="mensagemFormulario"></p>
 
-        <pre id="areaStreaming" style="display: none; background: #111; color: #0f0; padding: 15px; border-radius: 8px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 12px; margin-bottom: 20px;"></pre>
+        <div id="areaStreaming" class="logAtividade" style="display: none; margin-bottom: 20px;"></div>
 
         <div id="listaAlteracoes"></div>
 

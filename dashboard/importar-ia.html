@@ -37,37 +37,49 @@
         </nav>
     </aside>
     <main>
-        <header>
-            <h1>Importar produtos com IA</h1>
-        </header>
-        <section class="card" style="max-width: 700px;">
-            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                <button type="button" class="botaoAba" data-aba="link" onclick="mudarAba('link')">🔗 Link</button>
-                <button type="button" class="botaoAba" data-aba="arquivo" onclick="mudarAba('arquivo')">📎 Arquivo (PDF/Word)</button>
-                <button type="button" class="botaoAba" data-aba="texto" onclick="mudarAba('texto')">📝 Texto colado</button>
+
+        <h1 style="margin-bottom:20px;">Importar produtos com IA</h1>
+
+        <div class="formulario" style="max-width:700px;">
+
+            <div class="abasFormulario" id="abasImportar">
+                <button type="button" class="abaFormulario ativa" data-aba="link" onclick="mudarAba('link')">Link</button>
+                <button type="button" class="abaFormulario" data-aba="arquivo" onclick="mudarAba('arquivo')">Arquivo (PDF/Word)</button>
+                <button type="button" class="abaFormulario" data-aba="texto" onclick="mudarAba('texto')">Texto colado</button>
             </div>
+
             <div id="abaLink">
-                <label>Cole o link de uma página de busca/categoria do Mercado Livre</label>
-                <input type="text" id="linkPagina" placeholder="https://lista.mercadolivre.com.br/...">
-                <br><br>
-                <button id="btnBuscarLink">🔍 Buscar produtos pelo link</button>
+                <div class="campoFormulario">
+                    <label for="linkPagina">Link de uma página de busca/categoria do Mercado Livre</label>
+                    <input type="text" id="linkPagina" placeholder="https://lista.mercadolivre.com.br/...">
+                </div>
+                <button id="btnBuscarLink" class="primario">Buscar produtos pelo link</button>
             </div>
+
             <div id="abaArquivo" style="display: none;">
-                <label>Envie um arquivo PDF ou Word (.docx) com os produtos</label>
-                <input type="file" id="arquivoProdutos" accept=".pdf,.docx">
-                <br><br>
-                <button id="btnBuscarArquivo">🔍 Buscar produtos no arquivo</button>
+                <div class="campoFormulario">
+                    <label for="arquivoProdutos">Arquivo PDF ou Word (.docx) com os produtos</label>
+                    <input type="file" id="arquivoProdutos" accept=".pdf,.docx">
+                </div>
+                <button id="btnBuscarArquivo" class="primario">Buscar produtos no arquivo</button>
             </div>
+
             <div id="abaTexto" style="display: none;">
-                <label>Cole abaixo o texto copiado da página de produtos</label>
-                <textarea id="textoProdutos" rows="8" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;" placeholder="Cole aqui o texto copiado da página..."></textarea>
-                <br><br>
-                <button id="btnBuscarTexto">🔍 Buscar produtos no texto</button>
+                <div class="campoFormulario">
+                    <label for="textoProdutos">Texto copiado da página de produtos</label>
+                    <textarea id="textoProdutos" rows="3" class="campoExpandivel" placeholder="Cole aqui o texto copiado da página..."></textarea>
+                </div>
+                <button id="btnBuscarTexto" class="primario">Buscar produtos no texto</button>
             </div>
-            <p id="mensagemStatus"></p>
-            <pre id="areaStreaming" style="display: none; background: #111; color: #0f0; padding: 15px; border-radius: 8px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 12px;"></pre>
-        </section>
-        <section id="resultados"></section>
+
+            <p id="mensagemStatus" class="mensagemFormulario"></p>
+
+            <div id="areaStreaming" class="logAtividade" style="display: none; margin-top: 12px;"></div>
+
+        </div>
+
+        <div id="resultados" style="margin-top:20px; max-width:700px;"></div>
+
     </main>
     <script src="assets/js/importar-ia.js"></script>
     <script src="assets/js/menu.js"></script>

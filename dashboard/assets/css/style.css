@@ -685,3 +685,203 @@ button.primario:hover{
     font-size:13px;
     padding:9px 12px;
 }
+
+/* ===== Abas dentro de formulário (ex: Importar com IA) ===== */
+
+.abasFormulario{
+    display:flex;
+    gap:4px;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+    border-bottom:1px solid var(--cor-borda);
+}
+
+.abaFormulario{
+    padding:9px 14px;
+    border:none;
+    border-bottom:2px solid transparent;
+    border-radius:0;
+    background:transparent;
+    font-size:13px;
+    font-weight:600;
+    color:var(--cor-texto-secundario);
+    cursor:pointer;
+    margin-bottom:-1px;
+}
+
+.abaFormulario:hover{
+    color:var(--cor-texto);
+    background:transparent;
+    border-color:var(--cor-borda-forte);
+}
+
+.abaFormulario.ativa{
+    color:var(--cor-primaria);
+    border-color:var(--cor-primaria);
+}
+
+/* ===== Textarea e input de arquivo dentro de formulário ===== */
+
+.campoFormulario textarea{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--cor-borda-forte);
+    border-radius:var(--raio);
+    font-size:14px;
+    background:var(--cor-superficie);
+    font-family:inherit;
+    color:var(--cor-texto);
+    resize:vertical;
+}
+
+.campoFormulario textarea:focus{
+    outline:none;
+    border-color:var(--cor-primaria);
+}
+
+.campoFormulario input[type="file"]{
+    width:100%;
+    padding:9px 0;
+    border:none;
+    background:none;
+    font-size:13px;
+    color:var(--cor-texto-secundario);
+}
+
+/* ===== Cartão de resultado da importação por IA ===== */
+
+.cartaoResultadoImportacao{
+    background:var(--cor-superficie);
+    border:1px solid var(--cor-borda);
+    border-radius:var(--raio-grande);
+    padding:16px 18px;
+    margin-bottom:14px;
+    box-shadow:var(--sombra-card);
+}
+
+.cartaoResultadoImportacao .tituloResultado{
+    font-size:14px;
+    font-weight:600;
+    margin-bottom:4px;
+}
+
+.cartaoResultadoImportacao .metaResultado{
+    font-size:12px;
+    color:var(--cor-texto-secundario);
+    margin-bottom:8px;
+}
+
+.cartaoResultadoImportacao .textoVendaResultado{
+    font-size:13px;
+    color:var(--cor-texto-secundario);
+    margin-bottom:12px;
+}
+
+.botaoSecundario{
+    background:var(--cor-superficie-2);
+}
+
+/* ===== Log de atividade (streaming de IA) ===== */
+
+.logAtividade{
+    background:var(--cor-superficie-2);
+    border:1px solid var(--cor-borda);
+    border-radius:var(--raio);
+    padding:10px;
+    max-height:340px;
+    overflow-y:auto;
+}
+
+.linhaLog{
+    padding:8px 10px;
+    border-radius:8px;
+    font-size:13px;
+    line-height:1.4;
+    margin-bottom:4px;
+}
+
+.linhaLog-info{
+    color:var(--cor-texto-secundario);
+}
+
+.linhaLog-sucesso{
+    background:var(--cor-sucesso-fundo);
+    color:#166534;
+}
+
+.linhaLog-erro{
+    background:var(--cor-perigo-fundo);
+    color:#991B1B;
+}
+
+.linhaLog-aviso{
+    background:var(--cor-aviso-fundo);
+    color:#92400E;
+}
+
+.blocoPrompt{
+    background:var(--cor-superficie);
+    border:1px solid var(--cor-borda);
+    border-radius:var(--raio);
+    padding:10px 12px;
+    margin-bottom:6px;
+}
+
+.blocoPrompt summary{
+    cursor:pointer;
+    font-size:12px;
+    font-weight:600;
+    color:var(--cor-texto-secundario);
+    list-style:none;
+}
+
+.blocoPrompt summary::-webkit-details-marker{
+    display:none;
+}
+
+.blocoPrompt summary::before{
+    content:"› ";
+}
+
+.blocoPrompt[open] summary::before{
+    content:"⌄ ";
+}
+
+.blocoPrompt pre{
+    margin-top:8px;
+    font-size:12px;
+    font-family:ui-monospace, 'SFMono-Regular', Consolas, monospace;
+    white-space:pre-wrap;
+    word-break:break-word;
+    color:var(--cor-texto);
+    background:var(--cor-superficie-2);
+    padding:10px;
+    border-radius:8px;
+    max-height:220px;
+    overflow-y:auto;
+}
+
+.blocoResposta{
+    background:var(--cor-superficie);
+    border:1px solid var(--cor-borda);
+    border-radius:var(--raio);
+    padding:10px 12px;
+    font-size:12px;
+    font-family:ui-monospace, 'SFMono-Regular', Consolas, monospace;
+    white-space:pre-wrap;
+    word-break:break-word;
+    color:var(--cor-texto-secundario);
+    max-height:220px;
+    overflow-y:auto;
+    margin-bottom:6px;
+}
+
+/* ===== Campo de texto expansível (cresce com o conteúdo, sem rolar) ===== */
+
+.campoFormulario textarea.campoExpandivel,
+textarea.campoExpandivel{
+    resize:none;
+    overflow:hidden;
+    min-height:42px;
+    line-height:1.4;
+}

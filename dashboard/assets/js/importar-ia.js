@@ -1,6 +1,19 @@
 ﻿let produtosEncontrados = [];
 
 // ======================================
+// Textarea que cresce sozinha conforme o texto colado, em vez de rolar
+// verticalmente dentro de uma caixinha pequena — facilita ler e corrigir.
+// ======================================
+function ajustarAlturaTextarea(campo) {
+    campo.style.height = 'auto';
+    campo.style.height = campo.scrollHeight + 'px';
+}
+
+document.getElementById('textoProdutos').addEventListener('input', (evento) => {
+    ajustarAlturaTextarea(evento.target);
+});
+
+// ======================================
 // Controle das abas (Link / Arquivo / Texto)
 // ======================================
 function mudarAba(aba) {
@@ -9,11 +22,51 @@ function mudarAba(aba) {
     document.getElementById('abaArquivo').style.display = aba === 'arquivo' ? 'block' : 'none';
     document.getElementById('abaTexto').style.display = aba === 'texto' ? 'block' : 'none';
 
-    document.querySelectorAll('.botaoAba').forEach(botao => {
-        botao.style.fontWeight = botao.dataset.aba === aba ? 'bold' : 'normal';
-        botao.style.textDecoration = botao.dataset.aba === aba ? 'underline' : 'none';
+    document.querySelectorAll('.abaFormulario').forEach(botao => {
+        botao.classList.toggle('ativa', botao.dataset.aba === aba);
     });
 
+}
+
+// ======================================
+// Funções do log de atividade visual (substituem o antigo terminal preto):
+// linhas de status coloridas por tipo, bloco recolhível com o prompt
+// enviado à IA, e um bloco separado acumulando a resposta em streaming.
+// ======================================
+let elementoRespostaAtual = null;
+
+function adicionarLinhaLog(texto, tipo) {
+    const areaStreaming = document.getElementById('areaStreaming');
+    const linha = document.createElement('div');
+    linha.className = `linhaLog linhaLog-${tipo || 'info'}`;
+    linha.textContent = texto;
+    areaStreaming.appendChild(linha);
+    areaStreaming.scrollTop = areaStreaming.scrollHeight;
+}
+
+function mostrarPrompt(texto) {
+    const areaStreaming = document.getElementById('areaStreaming');
+    const bloco = document.createElement('details');
+    bloco.className = 'blocoPrompt';
+    const resumo = document.createElement('summary');
+    resumo.textContent = 'Ver prompt enviado à IA';
+    const pre = document.createElement('pre');
+    pre.textContent = texto;
+    bloco.appendChild(resumo);
+    bloco.appendChild(pre);
+    areaStreaming.appendChild(bloco);
+    areaStreaming.scrollTop = areaStreaming.scrollHeight;
+}
+
+function adicionarTrechoResposta(texto) {
+    const areaStreaming = document.getElementById('areaStreaming');
+    if (!elementoRespostaAtual) {
+        elementoRespostaAtual = document.createElement('pre');
+        elementoRespostaAtual.className = 'blocoResposta';
+        areaStreaming.appendChild(elementoRespostaAtual);
+    }
+    elementoRespostaAtual.textContent += texto;
+    areaStreaming.scrollTop = areaStreaming.scrollHeight;
 }
 
 // ======================================
@@ -23,12 +76,13 @@ function mudarAba(aba) {
 async function processarStream(resposta) {
 
     const mensagemStatus = document.getElementById('mensagemStatus');
-    const areaStreaming = document.getElementById('areaStreaming');
 
     if (!resposta.ok || !resposta.body) {
-        areaStreaming.textContent += '❌ Erro ao conectar com o servidor.\n';
+        adicionarLinhaLog('Erro ao conectar com o servidor.', 'erro');
         return;
     }
+
+    elementoRespostaAtual = null;
 
     const leitor = resposta.body.getReader();
     const decodificador = new TextDecoder();
@@ -55,27 +109,31 @@ async function processarStream(resposta) {
             const tipo = linhaEvento.replace('event:', '').trim();
             const dados = JSON.parse(linhaDados.replace('data:', '').trim());
 
+            if (tipo === 'prompt') {
+                mostrarPrompt(dados.texto);
+            }
+
             if (tipo === 'status') {
-                areaStreaming.textContent += `\nℹ️ ${dados.mensagem}\n`;
+                adicionarLinhaLog(dados.mensagem, 'info');
             }
 
             if (tipo === 'trecho') {
-                areaStreaming.textContent += dados.texto;
+                adicionarTrechoResposta(dados.texto);
             }
 
             if (tipo === 'erro') {
-                areaStreaming.textContent += `\n❌ ${dados.mensagem}\n`;
-                mensagemStatus.textContent = '❌ ' + dados.mensagem;
+                adicionarLinhaLog(dados.mensagem, 'erro');
+                mensagemStatus.className = 'mensagemFormulario erro';
+                mensagemStatus.textContent = dados.mensagem;
             }
 
             if (tipo === 'final') {
                 produtosEncontrados = dados.produtos;
-                mensagemStatus.textContent = `✅ ${produtosEncontrados.length} produto(s) encontrado(s). Busque o link de cada um e cole na caixinha antes de salvar.`;
-                areaStreaming.textContent += '\n\n✅ Concluído!\n';
+                mensagemStatus.className = 'mensagemFormulario sucesso';
+                mensagemStatus.textContent = `${produtosEncontrados.length} produto(s) encontrado(s). Busque o link de cada um e cole na caixinha antes de salvar.`;
+                adicionarLinhaLog('Concluído.', 'sucesso');
                 renderizarResultados();
             }
-
-            areaStreaming.scrollTop = areaStreaming.scrollHeight;
 
         }
 
@@ -89,10 +147,13 @@ function prepararTelaParaBusca() {
     const areaStreaming = document.getElementById('areaStreaming');
     const resultados = document.getElementById('resultados');
 
+    mensagemStatus.className = 'mensagemFormulario';
     mensagemStatus.textContent = '';
     areaStreaming.style.display = 'block';
-    areaStreaming.textContent = '⏳ Iniciando...\n';
+    areaStreaming.innerHTML = '';
     resultados.innerHTML = '';
+
+    adicionarLinhaLog('Iniciando...', 'info');
 
 }
 
@@ -106,6 +167,7 @@ async function buscarProdutosPorLink() {
     const botao = document.getElementById('btnBuscarLink');
 
     if (!link) {
+        mensagemStatus.className = 'mensagemFormulario erro';
         mensagemStatus.textContent = 'Cole um link antes de buscar.';
         return;
     }
@@ -125,8 +187,9 @@ async function buscarProdutosPorLink() {
 
     } catch (erro) {
 
-        document.getElementById('areaStreaming').textContent += `\n❌ Erro de conexão: ${erro.message}\n`;
-        mensagemStatus.textContent = '❌ Erro de conexão ao buscar produtos.';
+        adicionarLinhaLog(`Erro de conexão: ${erro.message}`, 'erro');
+        mensagemStatus.className = 'mensagemFormulario erro';
+        mensagemStatus.textContent = 'Erro de conexão ao buscar produtos.';
 
     }
 
@@ -144,6 +207,7 @@ async function buscarProdutosPorArquivo() {
     const botao = document.getElementById('btnBuscarArquivo');
 
     if (!inputArquivo.files || inputArquivo.files.length === 0) {
+        mensagemStatus.className = 'mensagemFormulario erro';
         mensagemStatus.textContent = 'Selecione um arquivo antes de buscar.';
         return;
     }
@@ -165,8 +229,9 @@ async function buscarProdutosPorArquivo() {
 
     } catch (erro) {
 
-        document.getElementById('areaStreaming').textContent += `\n❌ Erro de conexão: ${erro.message}\n`;
-        mensagemStatus.textContent = '❌ Erro de conexão ao buscar produtos.';
+        adicionarLinhaLog(`Erro de conexão: ${erro.message}`, 'erro');
+        mensagemStatus.className = 'mensagemFormulario erro';
+        mensagemStatus.textContent = 'Erro de conexão ao buscar produtos.';
 
     }
 
@@ -184,6 +249,7 @@ async function buscarProdutosPorTexto() {
     const botao = document.getElementById('btnBuscarTexto');
 
     if (!texto) {
+        mensagemStatus.className = 'mensagemFormulario erro';
         mensagemStatus.textContent = 'Cole o texto antes de buscar.';
         return;
     }
@@ -203,8 +269,9 @@ async function buscarProdutosPorTexto() {
 
     } catch (erro) {
 
-        document.getElementById('areaStreaming').textContent += `\n❌ Erro de conexão: ${erro.message}\n`;
-        mensagemStatus.textContent = '❌ Erro de conexão ao buscar produtos.';
+        adicionarLinhaLog(`Erro de conexão: ${erro.message}`, 'erro');
+        mensagemStatus.className = 'mensagemFormulario erro';
+        mensagemStatus.textContent = 'Erro de conexão ao buscar produtos.';
 
     }
 
@@ -259,28 +326,33 @@ function renderizarResultados() {
     produtosEncontrados.forEach((produto, indice) => {
 
         const div = document.createElement('div');
-        div.className = 'card';
-        div.style.marginBottom = '15px';
+        div.className = 'cartaoResultadoImportacao';
 
         const infoBusca = montarInfoBuscaMarketplace(produto.marketplace, produto.titulo);
 
+        const precoHtml = produto.precoAntigo
+            ? `<s style="color:var(--cor-texto-terciario); font-size:13px;">R$ ${produto.precoAntigo}</s> R$ ${produto.preco}`
+            : `R$ ${produto.preco}`;
+
         div.innerHTML = `
-            <label>
-                <input type="checkbox" class="checkboxProduto" data-indice="${indice}" checked>
-                <strong>${produto.titulo}</strong>
+            <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
+                <input type="checkbox" class="checkboxProduto" data-indice="${indice}" checked style="margin-top:3px;">
+                <span class="tituloResultado">${produto.titulo}</span>
             </label>
-            <p>💰 R$ ${produto.preco} ${produto.precoAntigo ? `(de R$ ${produto.precoAntigo})` : ''}</p>
-            <p>📂 ${produto.categoria || 'Sem categoria'} ${produto.marca ? '· ' + produto.marca : ''}</p>
-            <p>${produto.texto || ''}</p>
+            <p class="precoProduto" style="margin:8px 0 4px;">${precoHtml}</p>
+            <p class="metaResultado">${produto.categoria || 'Sem categoria'}${produto.marca ? ' · ' + produto.marca : ''}</p>
+            ${produto.texto ? `<p class="textoVendaResultado">${produto.texto}</p>` : ''}
             <a href="${infoBusca.url}" target="_blank">
-                <button type="button">🔍 Buscar produto no ${infoBusca.rotulo}</button>
+                <button type="button" class="botaoSecundario">Buscar produto no ${infoBusca.rotulo}</button>
             </a>
-            <br><br>
-            <label>Cole aqui o link de afiliado (pra enviar no WhatsApp):</label>
-            <input type="text" class="inputLinkProduto" data-indice="${indice}" placeholder="https://..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
-            <br><br>
-            <label>Cole aqui o link original da página do produto (sem afiliado — usado na verificação semanal de preço):</label>
-            <input type="text" class="inputLinkOriginalProduto" data-indice="${indice}" placeholder="https://..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+            <div class="campoFormulario" style="margin-top:12px;">
+                <label>Link de afiliado (pra enviar no WhatsApp)</label>
+                <input type="text" class="inputLinkProduto" data-indice="${indice}" placeholder="https://...">
+            </div>
+            <div class="campoFormulario">
+                <label>Link original da página do produto (sem afiliado — usado na verificação semanal de preço)</label>
+                <input type="text" class="inputLinkOriginalProduto" data-indice="${indice}" placeholder="https://...">
+            </div>
         `;
 
         resultados.appendChild(div);
@@ -290,9 +362,10 @@ function renderizarResultados() {
     if (produtosEncontrados.length > 0) {
 
         const botaoSalvar = document.createElement('button');
-        botaoSalvar.textContent = '💾 Salvar produtos selecionados';
+        botaoSalvar.textContent = 'Salvar produtos selecionados';
         botaoSalvar.id = 'btnSalvarSelecionados';
-        botaoSalvar.style.marginTop = '15px';
+        botaoSalvar.className = 'primario';
+        botaoSalvar.style.marginTop = '4px';
         botaoSalvar.addEventListener('click', salvarSelecionados);
         resultados.appendChild(botaoSalvar);
 
@@ -309,6 +382,7 @@ async function salvarSelecionados() {
     const mensagemStatus = document.getElementById('mensagemStatus');
 
     if (checkboxes.length === 0) {
+        mensagemStatus.className = 'mensagemFormulario erro';
         mensagemStatus.textContent = 'Selecione ao menos um produto para salvar.';
         return;
     }
@@ -384,9 +458,11 @@ async function salvarSelecionados() {
     }
 
     if (falhas > 0) {
-        mensagemStatus.innerHTML = `⚠️ ${salvos} salvo(s), <strong>${falhas} falharam</strong>. Último erro: ${ultimoErro}`;
+        mensagemStatus.className = 'mensagemFormulario erro';
+        mensagemStatus.innerHTML = `${salvos} salvo(s), <strong>${falhas} falharam</strong>. Último erro: ${ultimoErro}`;
     } else {
-        mensagemStatus.textContent = `✅ ${salvos} produto(s) salvo(s) como INATIVO. Vá em Produtos para revisar e ativar cada um.`;
+        mensagemStatus.className = 'mensagemFormulario sucesso';
+        mensagemStatus.textContent = `${salvos} produto(s) salvo(s) como inativo. Vá em Produtos para revisar e ativar cada um.`;
     }
 
     if (salvos > 0) {
