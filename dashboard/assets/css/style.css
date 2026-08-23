@@ -390,3 +390,134 @@ button.primario:hover{
     }
 
 }
+
+/* ===== Campo de busca ===== */
+
+.campoBusca{
+    width:100%;
+    max-width:420px;
+    padding:10px 14px;
+    margin-bottom:18px;
+    border:1px solid var(--cor-borda-forte);
+    border-radius:var(--raio);
+    font-size:14px;
+    background:var(--cor-superficie);
+}
+
+.campoBusca:focus{
+    outline:none;
+    border-color:var(--cor-primaria);
+}
+
+/* ===== Abas de marketplace ===== */
+
+.abasMarketplace{
+    display:flex;
+    gap:4px;
+    flex-wrap:wrap;
+    margin-bottom:20px;
+    border-bottom:1px solid var(--cor-borda);
+}
+
+.abaMarketplace{
+    padding:10px 16px;
+    border:none;
+    border-bottom:2px solid transparent;
+    border-radius:0;
+    background:transparent;
+    font-size:14px;
+    font-weight:600;
+    color:var(--cor-texto-secundario);
+    cursor:pointer;
+    margin-bottom:-1px;
+}
+
+.abaMarketplace:hover{
+    color:var(--cor-texto);
+    background:transparent;
+    border-color:var(--cor-borda-forte);
+}
+
+.abaMarketplace.ativa{
+    color:var(--cor-primaria);
+    border-color:var(--cor-primaria);
+}
+
+/* ===== Grade e cartão de produto ===== */
+
+.gradeProdutos{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
+    gap:16px;
+}
+
+.cartaoProduto{
+    background:var(--cor-superficie);
+    border:1px solid var(--cor-borda);
+    border-radius:var(--raio-grande);
+    box-shadow:var(--sombra-card);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+}
+
+.imagemProduto{
+    width:100%;
+    aspect-ratio:1/1;
+    background:var(--cor-superficie-2);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+}
+
+.imagemProduto img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+}
+
+.placeholderImagem{
+    font-size:12px;
+    color:var(--cor-texto-terciario);
+}
+
+.corpoProduto{
+    padding:12px 14px 14px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    flex:1;
+}
+
+.idProduto{
+    font-size:11px;
+    color:var(--cor-texto-terciario);
+}
+
+.tituloProduto{
+    font-size:13px;
+    font-weight:600;
+    line-height:1.35;
+    min-height:36px;
+    color:var(--cor-texto);
+}
+
+.precoProduto{
+    font-size:17px;
+    font-weight:700;
+    color:var(--cor-texto);
+}
+
+.acoesProduto{
+    display:flex;
+    gap:6px;
+    margin-top:auto;
+    padding-top:8px;
+}
+
+.acoesProduto button{
+    flex:1;
+    padding:7px 6px;
+    font-size:12px;
+}
