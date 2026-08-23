@@ -11,7 +11,7 @@
 
         const statusEl = document.getElementById("status");
         statusEl.textContent = dados.status;
-        statusEl.className = "badge badge-sucesso";
+        statusEl.className = dados.status === "Online" ? "badge badge-sucesso" : "badge badge-aviso";
 
         document.getElementById("nicho").textContent = dados.nicho;
 

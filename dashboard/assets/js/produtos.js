@@ -131,7 +131,7 @@ function renderizarGrade() {
             ? `<img src="${produto.imagem}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<span class=&quot;placeholderImagem&quot;>Sem foto</span>'">`
             : `<span class="placeholderImagem">Sem foto</span>`;
 
-        let badges = `<span class="badge ${produto.ativo ? "badge-sucesso" : "badge-neutro"}">${produto.ativo ? "Ativo" : "Inativo"}</span>`;
+        let badges = `<span class="badge ${produto.ativo ? "badge-sucesso" : "badge-perigo"}">${produto.ativo ? "Ativo" : "Inativo"}</span>`;
 
         if (linkSuspeito) {
             badges += ` <span class="badge badge-aviso">Link a confirmar</span>`;
