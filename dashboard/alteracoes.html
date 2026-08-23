@@ -53,7 +53,7 @@
 
         <h1>🔄 Alterações de Preço e Disponibilidade</h1>
 
-        <p style="color: #666; margin-bottom: 20px;">Toda semana, o sistema confere se o preço e a disponibilidade dos produtos ativos ainda batem. Preço mudou: atualizado automaticamente. Produto sumiu/esgotou: desativado automaticamente. Os dois casos aparecem aqui pra você revisar.</p>
+        <p style="color: #666; margin-bottom: 20px;">Toda semana, o sistema confere se o preço e a disponibilidade dos produtos ativos ainda batem. Diferenças pequenas de preço: corrigidas automaticamente. Diferenças grandes: só sugeridas, aguardando sua confirmação. Produto sumiu/esgotou: desativado automaticamente. Tudo isso aparece aqui pra você revisar.</p>
 
         <div style="margin-bottom: 20px;">
             <label>ID(s) de produto pra testar (opcional, separados por vírgula — ex: 12,15). Deixe vazio pra rodar em todos os produtos ativos.</label>
@@ -62,6 +62,8 @@
 
         <button id="btnRodarAgora" style="margin-bottom: 20px;">▶️ Rodar verificação agora</button>
         <p id="mensagemVerificacao"></p>
+
+        <pre id="areaStreaming" style="display: none; background: #111; color: #0f0; padding: 15px; border-radius: 8px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 12px; margin-bottom: 20px;"></pre>
 
         <div id="listaAlteracoes"></div>
 

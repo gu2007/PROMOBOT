@@ -303,12 +303,22 @@ function proximoProduto() {
 }
 
 // Diferença mínima de preço (10%) pra considerar que "mudou de verdade" e
-// vale a pena atualizar + avisar você, evitando ruído por centavos de arredondamento.
+// vale a pena atualizar sozinho + avisar você, evitando ruído por centavos
+// de arredondamento.
 const TOLERANCIA_MUDANCA_PRECO = 0.10;
 
-// Aplica o resultado da verificação semanal de um produto:
+// Acima disso (30%), a diferença é grande demais pra confiar cegamente na
+// leitura da IA — é mais provável ser erro de leitura (preço parcelado,
+// variação errada, produto errado) do que uma promoção real. Nesses casos,
+// o sistema NÃO aplica sozinho: só sugere, e espera sua confirmação manual.
+const TOLERANCIA_SUGESTAO_MAXIMA = 0.30;
+
+// Aplica o resultado da verificação de um produto:
 // - se ficou indisponível: desativa o produto e marca pra revisão
-// - se o preço mudou de verdade: atualiza o preço sozinho e marca pra revisão
+// - se o preço mudou pouco (10%-30%): atualiza sozinho e marca pra revisão
+// - se o preço mudou MUITO (acima de 30%): NÃO mexe no preço, só guarda a
+//   sugestão pra você aprovar manualmente (evita aplicar sozinho um possível
+//   erro grande de leitura da IA)
 // - se a IA encontrou uma foto do produto e ainda não tínhamos: salva ela,
 //   sem gerar alerta na aba de revisão (não é uma "alteração" que precisa de
 //   atenção, é só um dado que estava faltando)
@@ -350,8 +360,22 @@ function aplicarResultadoVerificacao(id, resultado) {
         const precoAtual = produto.preco;
         const diferenca = Math.abs(resultado.preco - precoAtual) / Math.max(resultado.preco, precoAtual);
 
+        if (diferenca > TOLERANCIA_SUGESTAO_MAXIMA) {
+
+            // Diferença grande demais: guarda como sugestão, NÃO aplica sozinho
+            produto.precoSugerido = resultado.preco;
+            produto.alteracaoDetectada = true;
+            produto.tipoAlteracao = 'preco_sugerido';
+            produto.dataVerificacao = new Date().toISOString();
+
+            salvarProdutos(produtos);
+            return;
+
+        }
+
         if (diferenca >= TOLERANCIA_MUDANCA_PRECO) {
 
+            // Diferença dentro da faixa confiável: aplica sozinho
             produto.precoAnterior = precoAtual;
             produto.preco = resultado.preco;
             produto.alteracaoDetectada = true;
