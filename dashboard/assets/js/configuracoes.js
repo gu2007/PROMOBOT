@@ -11,6 +11,8 @@
         document.getElementById("produtosPorHora").value = config.produtosPorHora;
         document.getElementById("intervaloRepeticaoHoras").value = config.intervaloRepeticaoHoras;
 
+        inicializarCamposExpandiveis();
+
     } catch (erro) {
 
         console.error("Erro ao carregar configurações:", erro);

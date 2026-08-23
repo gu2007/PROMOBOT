@@ -38,6 +38,8 @@
             document.getElementById("imagem").value = "";
             document.getElementById("pratinhaImagem").style.display = "none";
 
+            inicializarCamposExpandiveis();
+
         } else {
 
             mensagem.className = "mensagemFormulario erro";

@@ -19,6 +19,7 @@ async function carregarProduto() {
         document.getElementById("linkOriginal").value = produto.linkOriginal || "";
         document.getElementById("imagem").value = produto.imagem || "";
 
+        inicializarCamposExpandiveis();
         atualizarPratinhaImagem();
 
         const linkOriginalBotao = document.getElementById("linkOriginalBotao");

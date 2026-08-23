@@ -1,19 +1,6 @@
 ﻿let produtosEncontrados = [];
 
 // ======================================
-// Textarea que cresce sozinha conforme o texto colado, em vez de rolar
-// verticalmente dentro de uma caixinha pequena — facilita ler e corrigir.
-// ======================================
-function ajustarAlturaTextarea(campo) {
-    campo.style.height = 'auto';
-    campo.style.height = campo.scrollHeight + 'px';
-}
-
-document.getElementById('textoProdutos').addEventListener('input', (evento) => {
-    ajustarAlturaTextarea(evento.target);
-});
-
-// ======================================
 // Controle das abas (Link / Arquivo / Texto)
 // ======================================
 function mudarAba(aba) {
@@ -347,17 +334,19 @@ function renderizarResultados() {
             </a>
             <div class="campoFormulario" style="margin-top:12px;">
                 <label>Link de afiliado (pra enviar no WhatsApp)</label>
-                <input type="text" class="inputLinkProduto" data-indice="${indice}" placeholder="https://...">
+                <textarea class="inputLinkProduto campoExpandivel" rows="1" data-indice="${indice}" placeholder="https://..."></textarea>
             </div>
             <div class="campoFormulario">
                 <label>Link original da página do produto (sem afiliado — usado na verificação semanal de preço)</label>
-                <input type="text" class="inputLinkOriginalProduto" data-indice="${indice}" placeholder="https://...">
+                <textarea class="inputLinkOriginalProduto campoExpandivel" rows="1" data-indice="${indice}" placeholder="https://..."></textarea>
             </div>
         `;
 
         resultados.appendChild(div);
 
     });
+
+    inicializarCamposExpandiveis(resultados);
 
     if (produtosEncontrados.length > 0) {
 

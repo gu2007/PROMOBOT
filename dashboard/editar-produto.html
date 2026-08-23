@@ -75,14 +75,14 @@
 
                 <div class="campoFormulario">
                     <label for="categoria">Categoria</label>
-                    <input type="text" id="categoria">
+                    <textarea id="categoria" rows="1" class="campoExpandivel"></textarea>
                 </div>
 
             </div>
 
             <div class="campoFormulario">
                 <label for="titulo">Título</label>
-                <input type="text" id="titulo">
+                <textarea id="titulo" rows="1" class="campoExpandivel"></textarea>
             </div>
 
             <div class="linhaFormulario">
@@ -101,7 +101,7 @@
 
             <div class="campoFormulario">
                 <label for="linkAfiliado">Link de afiliado</label>
-                <input type="text" id="linkAfiliado">
+                <textarea id="linkAfiliado" rows="1" class="campoExpandivel"></textarea>
                 <a id="linkOriginalBotao" href="#" target="_blank" style="display:none; margin-top:8px;">
                     <button type="button">Abrir produto original</button>
                 </a>
@@ -109,13 +109,13 @@
 
             <div class="campoFormulario">
                 <label for="linkOriginal">Link original do produto</label>
-                <input type="text" id="linkOriginal" placeholder="Ex: https://www.mercadolivre.com.br/.../p/MLB...">
+                <textarea id="linkOriginal" rows="1" class="campoExpandivel" placeholder="Ex: https://www.mercadolivre.com.br/.../p/MLB..."></textarea>
                 <small>Página direta, sem afiliado — usada pela verificação semanal de preço.</small>
             </div>
 
             <div class="campoFormulario">
                 <label for="imagem">Imagem do produto (URL)</label>
-                <input type="text" id="imagem" placeholder="Cole o endereço da foto do produto">
+                <textarea id="imagem" rows="1" class="campoExpandivel" placeholder="Cole o endereço da foto do produto"></textarea>
                 <small>Clique com o botão direito na foto do produto no site e escolha "Copiar endereço da imagem".</small>
                 <div class="pratinhaImagem" id="pratinhaImagem" style="display:none;">
                     <img id="pratinhaImagemFoto" src="" alt="">
@@ -130,6 +130,8 @@
         </div>
 
     </main>
+
+    <script src="/assets/js/expandivel.js"></script>
 
     <script src="/assets/js/editar-produto.js"></script>
 
