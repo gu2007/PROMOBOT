@@ -445,12 +445,13 @@ button.primario:hover{
     border-color:var(--cor-primaria);
 }
 
-/* ===== Carrossel de produtos ===== */
+/* ===== Linhas de produtos (cada linha com até 20 produtos, rolagem própria) ===== */
 
 .carrosselWrapper{
     display:flex;
     align-items:center;
     gap:8px;
+    margin-bottom:16px;
 }
 
 .carrosselProdutos{
@@ -486,9 +487,14 @@ button.primario:hover{
     line-height:1;
 }
 
+.botaoCarrossel:disabled{
+    opacity:.35;
+    cursor:not-allowed;
+}
+
 .cartaoProdutoPequeno{
-    flex:0 0 150px;
-    width:150px;
+    flex:0 0 172px;
+    width:172px;
     scroll-snap-align:start;
     background:var(--cor-superficie);
     border:1px solid var(--cor-borda);
@@ -580,6 +586,43 @@ button.primario:hover{
         font-size:14px;
     }
 
+}
+
+/* ===== Paginação de linhas (quando passa de 12 linhas na tela) ===== */
+
+.paginacaoLinhas{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    margin-top:24px;
+    flex-wrap:wrap;
+}
+
+.botaoPagina{
+    min-width:34px;
+    height:34px;
+    padding:0 8px;
+    border-radius:8px;
+    font-size:13px;
+    font-weight:600;
+    border:1px solid var(--cor-borda-forte);
+    background:var(--cor-superficie);
+    color:var(--cor-texto-secundario);
+    cursor:pointer;
+}
+
+.botaoPagina.ativa{
+    border-color:var(--cor-primaria);
+    color:var(--cor-primaria);
+    background:var(--cor-primaria-fundo);
+}
+
+.botaoPaginaSeguinte{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    color:var(--cor-texto);
 }
 
 /* ===== Grade e cartão de produto ===== */

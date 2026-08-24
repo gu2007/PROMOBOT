@@ -1,5 +1,9 @@
 ﻿let todosOsProdutos = [];
 let abaAtiva = "todos";
+let paginaAtual = 0;
+
+const PRODUTOS_POR_LINHA = 20;
+const LINHAS_POR_PAGINA = 12;
 
 // ======================================
 // Normaliza o nome do marketplace (mesma lógica usada na dashboard), pra
@@ -83,13 +87,164 @@ function renderizarAbas() {
 function selecionarAba(chave) {
 
     abaAtiva = chave;
+    paginaAtual = 0;
     renderizarAbas();
     renderizarGrade();
 
 }
 
 // ======================================
-// Filtra pela aba ativa + termo de busca, e desenha a grade de cartões.
+// Divide uma lista em grupos menores (ex: 47 produtos, grupos de 20 ->
+// [20, 20, 7]). Cada grupo vira uma linha própria com seu próprio carrossel.
+// ======================================
+function dividirEmGrupos(lista, tamanho) {
+
+    const grupos = [];
+
+    for (let i = 0; i < lista.length; i += tamanho) {
+        grupos.push(lista.slice(i, i + tamanho));
+    }
+
+    return grupos;
+
+}
+
+// ======================================
+// Monta o HTML de um único cartão de produto (usado dentro de cada linha).
+// ======================================
+function montarCartaoProduto(produto) {
+
+    const linkSuspeito = !produto.linkAfiliado || produto.linkAfiliado === "LINK_NAO_CONFIRMADO" || !produto.linkAfiliado.startsWith("http");
+
+    const cartao = document.createElement("div");
+    cartao.className = "cartaoProdutoPequeno";
+
+    const imagemHtml = produto.imagem
+        ? `<img src="${produto.imagem}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<span class=&quot;placeholderImagem&quot;>Sem foto</span>'">`
+        : `<span class="placeholderImagem">Sem foto</span>`;
+
+    let badges = `<span class="badge ${produto.ativo ? "badge-sucesso" : "badge-perigo"}">${produto.ativo ? "Ativo" : "Inativo"}</span>`;
+
+    if (linkSuspeito) {
+        badges += ` <span class="badge badge-aviso">Link a confirmar</span>`;
+    }
+
+    cartao.innerHTML = `
+        <div class="imagemProduto">
+            ${imagemHtml}
+            <div class="acoesImagemProduto">
+                <button class="acaoIconeProduto" onclick="editarProduto(${produto.id})" aria-label="Editar produto" title="Editar">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                </button>
+                <button class="acaoIconeProduto acaoExcluir" onclick="excluirProduto(${produto.id})" aria-label="Excluir produto" title="Excluir">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </button>
+            </div>
+        </div>
+        <div class="corpoProduto">
+            <p class="idProduto">ID: ${produto.id}</p>
+            <p class="tituloProduto">${produto.titulo}</p>
+            <p class="precoProduto">R$ ${produto.preco}</p>
+            <div>${badges}</div>
+            <div class="acoesProduto">
+                <button onclick="alterarStatus(${produto.id})">${produto.ativo ? "Desativar" : "Ativar"}</button>
+            </div>
+        </div>
+    `;
+
+    return cartao;
+
+}
+
+// ======================================
+// Monta uma linha inteira: setas + carrossel horizontal com os produtos
+// desse grupo (até 20). Cada linha rola de lado de forma independente.
+// ======================================
+function montarLinhaCarrossel(produtosDaLinha) {
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "carrosselWrapper";
+
+    const botaoAnterior = document.createElement("button");
+    botaoAnterior.className = "botaoCarrossel";
+    botaoAnterior.setAttribute("aria-label", "Ver produtos anteriores");
+    botaoAnterior.textContent = "‹";
+
+    const carrossel = document.createElement("div");
+    carrossel.className = "carrosselProdutos";
+
+    const botaoProximo = document.createElement("button");
+    botaoProximo.className = "botaoCarrossel";
+    botaoProximo.setAttribute("aria-label", "Ver mais produtos dessa linha");
+    botaoProximo.textContent = "›";
+
+    botaoAnterior.addEventListener("click", () => {
+        carrossel.scrollBy({ left: -carrossel.clientWidth * 0.9, behavior: "smooth" });
+    });
+
+    botaoProximo.addEventListener("click", () => {
+        carrossel.scrollBy({ left: carrossel.clientWidth * 0.9, behavior: "smooth" });
+    });
+
+    produtosDaLinha.forEach(produto => {
+        carrossel.appendChild(montarCartaoProduto(produto));
+    });
+
+    wrapper.appendChild(botaoAnterior);
+    wrapper.appendChild(carrossel);
+    wrapper.appendChild(botaoProximo);
+
+    return wrapper;
+
+}
+
+// ======================================
+// Monta a navegação numerada (1, 2, 3... + "Seguinte ›"), usada quando o
+// total de linhas passa do limite de uma página.
+// ======================================
+function montarPaginacao(totalPaginas) {
+
+    const nav = document.createElement("div");
+    nav.className = "paginacaoLinhas";
+
+    for (let i = 0; i < totalPaginas; i++) {
+
+        const botao = document.createElement("button");
+        botao.className = "botaoPagina" + (i === paginaAtual ? " ativa" : "");
+        botao.textContent = i + 1;
+        botao.addEventListener("click", () => {
+            paginaAtual = i;
+            renderizarGrade();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        nav.appendChild(botao);
+
+    }
+
+    if (paginaAtual < totalPaginas - 1) {
+
+        const seguinte = document.createElement("button");
+        seguinte.className = "botaoPagina botaoPaginaSeguinte";
+        seguinte.textContent = "Seguinte ›";
+        seguinte.addEventListener("click", () => {
+            paginaAtual++;
+            renderizarGrade();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        nav.appendChild(seguinte);
+
+    }
+
+    return nav;
+
+}
+
+// ======================================
+// Filtra pela aba ativa + termo de busca, divide em linhas de até 20
+// produtos, limita a 12 linhas por página (com navegação numerada quando
+// precisa de mais páginas), e desenha cada linha com seu próprio carrossel.
 // ======================================
 function renderizarGrade() {
 
@@ -117,79 +272,27 @@ function renderizarGrade() {
         return;
     }
 
-    const wrapper = document.createElement("div");
-    wrapper.className = "carrosselWrapper";
+    const todasAsLinhas = dividirEmGrupos(produtosFiltrados, PRODUTOS_POR_LINHA);
+    const totalPaginas = Math.ceil(todasAsLinhas.length / LINHAS_POR_PAGINA);
 
-    const botaoAnterior = document.createElement("button");
-    botaoAnterior.className = "botaoCarrossel";
-    botaoAnterior.setAttribute("aria-label", "Ver produtos anteriores");
-    botaoAnterior.textContent = "‹";
+    if (paginaAtual >= totalPaginas) {
+        paginaAtual = totalPaginas - 1;
+    }
 
-    const carrossel = document.createElement("div");
-    carrossel.className = "carrosselProdutos";
+    if (paginaAtual < 0) {
+        paginaAtual = 0;
+    }
 
-    const botaoProximo = document.createElement("button");
-    botaoProximo.className = "botaoCarrossel";
-    botaoProximo.setAttribute("aria-label", "Ver mais produtos");
-    botaoProximo.textContent = "›";
+    const inicioLinha = paginaAtual * LINHAS_POR_PAGINA;
+    const linhasDaPagina = todasAsLinhas.slice(inicioLinha, inicioLinha + LINHAS_POR_PAGINA);
 
-    botaoAnterior.addEventListener("click", () => {
-        carrossel.scrollBy({ left: -carrossel.clientWidth * 0.9, behavior: "smooth" });
+    linhasDaPagina.forEach(produtosDaLinha => {
+        container.appendChild(montarLinhaCarrossel(produtosDaLinha));
     });
 
-    botaoProximo.addEventListener("click", () => {
-        carrossel.scrollBy({ left: carrossel.clientWidth * 0.9, behavior: "smooth" });
-    });
-
-    produtosFiltrados.forEach(produto => {
-
-        const linkSuspeito = !produto.linkAfiliado || produto.linkAfiliado === "LINK_NAO_CONFIRMADO" || !produto.linkAfiliado.startsWith("http");
-
-        const cartao = document.createElement("div");
-        cartao.className = "cartaoProdutoPequeno";
-
-        const imagemHtml = produto.imagem
-            ? `<img src="${produto.imagem}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<span class=&quot;placeholderImagem&quot;>Sem foto</span>'">`
-            : `<span class="placeholderImagem">Sem foto</span>`;
-
-        let badges = `<span class="badge ${produto.ativo ? "badge-sucesso" : "badge-perigo"}">${produto.ativo ? "Ativo" : "Inativo"}</span>`;
-
-        if (linkSuspeito) {
-            badges += ` <span class="badge badge-aviso">Link a confirmar</span>`;
-        }
-
-        cartao.innerHTML = `
-            <div class="imagemProduto">
-                ${imagemHtml}
-                <div class="acoesImagemProduto">
-                    <button class="acaoIconeProduto" onclick="editarProduto(${produto.id})" aria-label="Editar produto" title="Editar">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                    </button>
-                    <button class="acaoIconeProduto acaoExcluir" onclick="excluirProduto(${produto.id})" aria-label="Excluir produto" title="Excluir">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                    </button>
-                </div>
-            </div>
-            <div class="corpoProduto">
-                <p class="idProduto">ID: ${produto.id}</p>
-                <p class="tituloProduto">${produto.titulo}</p>
-                <p class="precoProduto">R$ ${produto.preco}</p>
-                <div>${badges}</div>
-                <div class="acoesProduto">
-                    <button onclick="alterarStatus(${produto.id})">${produto.ativo ? "Desativar" : "Ativar"}</button>
-                </div>
-            </div>
-        `;
-
-        carrossel.appendChild(cartao);
-
-    });
-
-    wrapper.appendChild(botaoAnterior);
-    wrapper.appendChild(carrossel);
-    wrapper.appendChild(botaoProximo);
-
-    container.appendChild(wrapper);
+    if (totalPaginas > 1) {
+        container.appendChild(montarPaginacao(totalPaginas));
+    }
 
 }
 
@@ -263,6 +366,9 @@ async function excluirProduto(id) {
 
 }
 
-document.getElementById("filtroBusca").addEventListener("input", renderizarGrade);
+document.getElementById("filtroBusca").addEventListener("input", () => {
+    paginaAtual = 0;
+    renderizarGrade();
+});
 
 carregarProdutos();
