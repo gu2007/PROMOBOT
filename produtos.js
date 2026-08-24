@@ -212,7 +212,7 @@ function adicionarProduto(produtoNovo) {
 
     salvarProdutos(produtos);
 
-    return "atualizado";
+    return existente || produtoNovo;
 
 }
 
