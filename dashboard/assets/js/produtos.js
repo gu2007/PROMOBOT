@@ -371,4 +371,117 @@ document.getElementById("filtroBusca").addEventListener("input", () => {
     renderizarGrade();
 });
 
+// ======================================
+// Adiciona uma linha colorida na área de log (mesmo padrão visual usado na
+// Verificação de Preços e na Importação por IA).
+// ======================================
+function adicionarLinhaLogResolucao(texto, tipo) {
+
+    const area = document.getElementById("areaResolucao");
+    const linha = document.createElement("div");
+    linha.className = `linhaLog linhaLog-${tipo || "info"}`;
+    linha.textContent = texto;
+    area.appendChild(linha);
+    area.scrollTop = area.scrollHeight;
+
+}
+
+// ======================================
+// Dispara a resolução automática (link original + imagem) em todos os
+// produtos do Mercado Livre que ainda estão com algum campo faltando —
+// útil pra completar produtos antigos, cadastrados antes dessa
+// funcionalidade existir. Mostra o progresso produto por produto,
+// em tempo real, via streaming (SSE).
+// ======================================
+async function resolverPendentes() {
+
+    const botao = document.getElementById("btnResolverPendentes");
+    const mensagem = document.getElementById("mensagemResolucao");
+    const area = document.getElementById("areaResolucao");
+
+    botao.disabled = true;
+    mensagem.className = "mensagemFormulario";
+    mensagem.textContent = "";
+    area.style.display = "block";
+    area.innerHTML = "";
+
+    try {
+
+        const resposta = await fetch("/api/produtos/resolver-pendentes", { method: "POST" });
+
+        if (!resposta.ok || !resposta.body) {
+            adicionarLinhaLogResolucao("Erro ao conectar com o servidor.", "erro");
+            botao.disabled = false;
+            return;
+        }
+
+        const leitor = resposta.body.getReader();
+        const decodificador = new TextDecoder();
+        let bufferTexto = "";
+
+        while (true) {
+
+            const { done, value } = await leitor.read();
+
+            if (done) break;
+
+            bufferTexto += decodificador.decode(value, { stream: true });
+
+            const partes = bufferTexto.split("\n\n");
+            bufferTexto = partes.pop();
+
+            for (const parte of partes) {
+
+                const linhaEvento = parte.split("\n").find(l => l.startsWith("event:"));
+                const linhaDados = parte.split("\n").find(l => l.startsWith("data:"));
+
+                if (!linhaEvento || !linhaDados) continue;
+
+                const tipo = linhaEvento.replace("event:", "").trim();
+                const dados = JSON.parse(linhaDados.replace("data:", "").trim());
+
+                if (tipo === "inicio") {
+
+                    if (dados.total === 0) {
+                        adicionarLinhaLogResolucao("Nenhum produto pendente encontrado — todos já têm link original e imagem.", "sucesso");
+                    } else {
+                        adicionarLinhaLogResolucao(`${dados.total} produto(s) pendente(s) encontrado(s). Isso pode levar alguns minutos...`, "info");
+                    }
+
+                }
+
+                if (tipo === "produto") {
+
+                    const texto = `#${dados.produtoId} ${dados.titulo.slice(0, 50)} — ${dados.sucesso ? "resolvido com sucesso" : "não foi possível resolver"}`;
+                    adicionarLinhaLogResolucao(texto, dados.sucesso ? "sucesso" : "aviso");
+
+                }
+
+                if (tipo === "final") {
+
+                    adicionarLinhaLogResolucao(`Concluído: ${dados.resolvidos} resolvido(s), ${dados.falhas} não resolvido(s).`, "sucesso");
+                    mensagem.className = "mensagemFormulario sucesso";
+                    mensagem.textContent = "Resolução concluída — atualizando a lista de produtos...";
+                    carregarProdutos();
+
+                }
+
+            }
+
+        }
+
+    } catch (erro) {
+
+        adicionarLinhaLogResolucao(`Erro de conexão: ${erro.message}`, "erro");
+
+    }
+
+    botao.disabled = false;
+
+}
+
+document
+    .getElementById("btnResolverPendentes")
+    .addEventListener("click", resolverPendentes);
+
 carregarProdutos();

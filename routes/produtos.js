@@ -72,6 +72,98 @@ router.get("/", (req, res) => {
 });
 
 // ======================================
+// RESOLVER EM MASSA: roda a resolução automática (link original + imagem)
+// em todos os produtos do Mercado Livre que ainda estão com algum desses
+// campos vazio — útil pra completar produtos antigos, cadastrados antes
+// dessa funcionalidade existir. Mostra o progresso em tempo real (SSE),
+// produto por produto, igual à Verificação de Preços.
+// ======================================
+router.post("/resolver-pendentes", async (req, res) => {
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    function enviarEvento(tipo, dados) {
+        res.write(`event: ${tipo}\ndata: ${JSON.stringify(dados)}\n\n`);
+    }
+
+    const todosOsProdutos = listarProdutos();
+
+    const pendentes = todosOsProdutos.filter(produto =>
+        ehLinkMercadoLivre(produto.linkAfiliado) && (!produto.linkOriginal || !produto.imagem)
+    );
+
+    enviarEvento("inicio", { total: pendentes.length });
+
+    let resolvidos = 0;
+    let falhas = 0;
+
+    for (const produto of pendentes) {
+
+        try {
+
+            const resultado = await resolverLinkMercadoLivre(produto.linkAfiliado);
+
+            const produtosAtuais = listarProdutos();
+            const indice = produtosAtuais.findIndex(p => p.id === produto.id);
+
+            let mudouAlgumaCoisa = false;
+
+            if (indice !== -1) {
+
+                if (resultado.linkOriginal && !produtosAtuais[indice].linkOriginal) {
+                    produtosAtuais[indice].linkOriginal = resultado.linkOriginal;
+                    mudouAlgumaCoisa = true;
+                }
+
+                if (resultado.imagem && !produtosAtuais[indice].imagem) {
+                    produtosAtuais[indice].imagem = resultado.imagem;
+                    mudouAlgumaCoisa = true;
+                }
+
+                if (mudouAlgumaCoisa) {
+                    produtosAtuais[indice].atualizadoEm = new Date().toISOString();
+                    salvarProdutos(produtosAtuais);
+                }
+
+            }
+
+            if (mudouAlgumaCoisa) {
+                resolvidos++;
+            } else {
+                falhas++;
+            }
+
+            enviarEvento("produto", {
+                produtoId: produto.id,
+                titulo: produto.titulo,
+                sucesso: mudouAlgumaCoisa
+            });
+
+        } catch (erro) {
+
+            falhas++;
+
+            enviarEvento("produto", {
+                produtoId: produto.id,
+                titulo: produto.titulo,
+                sucesso: false,
+                erro: erro.message
+            });
+
+        }
+
+    }
+
+    enviarEvento("final", { total: pendentes.length, resolvidos, falhas });
+
+    res.end();
+
+});
+
+// ======================================
 // BUSCAR UM PRODUTO
 // ======================================
 router.get("/:id", (req, res) => {
