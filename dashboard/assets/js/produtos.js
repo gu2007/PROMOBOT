@@ -117,15 +117,36 @@ function renderizarGrade() {
         return;
     }
 
-    const grade = document.createElement("div");
-    grade.className = "gradeProdutos";
+    const wrapper = document.createElement("div");
+    wrapper.className = "carrosselWrapper";
+
+    const botaoAnterior = document.createElement("button");
+    botaoAnterior.className = "botaoCarrossel";
+    botaoAnterior.setAttribute("aria-label", "Ver produtos anteriores");
+    botaoAnterior.textContent = "‹";
+
+    const carrossel = document.createElement("div");
+    carrossel.className = "carrosselProdutos";
+
+    const botaoProximo = document.createElement("button");
+    botaoProximo.className = "botaoCarrossel";
+    botaoProximo.setAttribute("aria-label", "Ver mais produtos");
+    botaoProximo.textContent = "›";
+
+    botaoAnterior.addEventListener("click", () => {
+        carrossel.scrollBy({ left: -carrossel.clientWidth * 0.9, behavior: "smooth" });
+    });
+
+    botaoProximo.addEventListener("click", () => {
+        carrossel.scrollBy({ left: carrossel.clientWidth * 0.9, behavior: "smooth" });
+    });
 
     produtosFiltrados.forEach(produto => {
 
         const linkSuspeito = !produto.linkAfiliado || produto.linkAfiliado === "LINK_NAO_CONFIRMADO" || !produto.linkAfiliado.startsWith("http");
 
         const cartao = document.createElement("div");
-        cartao.className = "cartaoProduto";
+        cartao.className = "cartaoProdutoPequeno";
 
         const imagemHtml = produto.imagem
             ? `<img src="${produto.imagem}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<span class=&quot;placeholderImagem&quot;>Sem foto</span>'">`
@@ -138,25 +159,37 @@ function renderizarGrade() {
         }
 
         cartao.innerHTML = `
-            <div class="imagemProduto">${imagemHtml}</div>
+            <div class="imagemProduto">
+                ${imagemHtml}
+                <div class="acoesImagemProduto">
+                    <button class="acaoIconeProduto" onclick="editarProduto(${produto.id})" aria-label="Editar produto" title="Editar">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    </button>
+                    <button class="acaoIconeProduto acaoExcluir" onclick="excluirProduto(${produto.id})" aria-label="Excluir produto" title="Excluir">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    </button>
+                </div>
+            </div>
             <div class="corpoProduto">
                 <p class="idProduto">ID: ${produto.id}</p>
                 <p class="tituloProduto">${produto.titulo}</p>
                 <p class="precoProduto">R$ ${produto.preco}</p>
                 <div>${badges}</div>
                 <div class="acoesProduto">
-                    <button onclick="editarProduto(${produto.id})">Editar</button>
                     <button onclick="alterarStatus(${produto.id})">${produto.ativo ? "Desativar" : "Ativar"}</button>
-                    <button onclick="excluirProduto(${produto.id})">Excluir</button>
                 </div>
             </div>
         `;
 
-        grade.appendChild(cartao);
+        carrossel.appendChild(cartao);
 
     });
 
-    container.appendChild(grade);
+    wrapper.appendChild(botaoAnterior);
+    wrapper.appendChild(carrossel);
+    wrapper.appendChild(botaoProximo);
+
+    container.appendChild(wrapper);
 
 }
 
