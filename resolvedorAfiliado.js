@@ -1,5 +1,7 @@
 ﻿const puppeteer = require('puppeteer');
 
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
 // ======================================
 // Mantém UM navegador aberto e reaproveitado entre resoluções (só é aberto
 // na primeira vez que for realmente necessário), em vez de abrir e fechar
@@ -21,9 +23,10 @@ function obterNavegador() {
 }
 
 // ======================================
-// Fila simples: garante que só UMA resolução roda por vez, mesmo que várias
-// sejam disparadas quase juntas (ex: importação de vários produtos de uma
-// vez). Evita sobrecarregar o servidor com várias abas ao mesmo tempo.
+// Fila simples: garante que só UMA resolução roda por vez (Mercado Livre ou
+// Amazon, tanto faz), mesmo que várias sejam disparadas quase juntas (ex:
+// importação de vários produtos de uma vez). Evita sobrecarregar o servidor
+// com várias abas ao mesmo tempo.
 // ======================================
 let filaAtual = Promise.resolve();
 
@@ -39,21 +42,27 @@ function enfileirar(tarefa) {
 }
 
 // ======================================
-// Verifica se um link é um link de afiliado encurtado do Mercado Livre
-// (os únicos que sabemos resolver automaticamente, por enquanto).
+// Verifica de qual marketplace é um link de afiliado (ou se é de nenhum dos
+// que sabemos resolver automaticamente, por enquanto).
 // ======================================
 function ehLinkMercadoLivre(link) {
-
     return typeof link === 'string' && link.includes('meli.la');
+}
 
+function ehLinkAmazon(link) {
+    return typeof link === 'string' && link.includes('link.amazon');
+}
+
+function ehLinkConhecido(link) {
+    return ehLinkMercadoLivre(link) || ehLinkAmazon(link);
 }
 
 // ======================================
-// Abre o link de afiliado num navegador de verdade (headless), segue os
-// redirecionamentos automáticos até a página "de perfil" do Mercado Livre,
-// e dentro dela encontra o link do produto real (marcado como
-// "card-featured" — testado e confirmado em produtos diferentes) e a URL
-// da imagem oficial do produto (og:image).
+// MERCADO LIVRE: abre o link de afiliado num navegador de verdade
+// (headless), segue os redirecionamentos automáticos até a página "de
+// perfil" do Mercado Livre, e dentro dela encontra o link do produto real
+// (marcado como "card-featured" — testado e confirmado em produtos
+// diferentes) e a URL da imagem oficial do produto (og:image).
 // ======================================
 async function resolverLinkMercadoLivre(linkAfiliado) {
 
@@ -64,7 +73,7 @@ async function resolverLinkMercadoLivre(linkAfiliado) {
 
         try {
 
-            await pagina.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+            await pagina.setUserAgent(USER_AGENT);
 
             await pagina.goto(linkAfiliado, {
                 waitUntil: 'networkidle2',
@@ -100,7 +109,102 @@ async function resolverLinkMercadoLivre(linkAfiliado) {
 
 }
 
+// ======================================
+// AMAZON: em duas etapas.
+//
+// 1) Usa o navegador de verdade só pra seguir o redirecionamento do link
+//    de afiliado até a página real do produto (a Amazon bloqueia o
+//    conteúdo dessa navegação com uma tela de "Continuar comprando", mas o
+//    ENDEREÇO final já é confiável mesmo assim — testado e confirmado).
+//
+// 2) Com esse endereço limpo em mãos, faz um pedido simples (sem precisar
+//    de navegador) direto nele — testamos e essa segunda etapa NÃO cai no
+//    mesmo bloqueio, e o conteúdo real da página vem completo. De lá,
+//    procura a foto principal do produto (a Amazon salva ela com o
+//    sufixo "_AC_SL1500_", o tamanho grande oficial).
+// ======================================
+async function resolverLinkAmazon(linkAfiliado) {
+
+    return enfileirar(async () => {
+
+        const navegador = await obterNavegador();
+        const pagina = await navegador.newPage();
+
+        let linkOriginal = null;
+
+        try {
+
+            await pagina.setUserAgent(USER_AGENT);
+
+            await pagina.goto(linkAfiliado, {
+                waitUntil: 'networkidle2',
+                timeout: 20000
+            });
+
+            linkOriginal = pagina.url().split('?')[0];
+
+        } finally {
+
+            await pagina.close();
+
+        }
+
+        let imagem = null;
+
+        if (linkOriginal) {
+
+            try {
+
+                const resposta = await fetch(linkOriginal, {
+                    headers: { 'User-Agent': USER_AGENT }
+                });
+
+                const html = await resposta.text();
+
+                const correspondencia = html.match(
+                    /https:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9+\-_]+\._AC_SL1500_\.jpg/i
+                );
+
+                imagem = correspondencia ? correspondencia[0] : null;
+
+            } catch (erro) {
+
+                // Se essa parte falhar, não tem problema — pelo menos o
+                // link original já foi resolvido com sucesso.
+
+            }
+
+        }
+
+        return { linkOriginal, imagem };
+
+    });
+
+}
+
+// ======================================
+// Escolhe automaticamente o resolvedor certo, de acordo com o marketplace
+// do link recebido.
+// ======================================
+async function resolverLinkAfiliado(linkAfiliado) {
+
+    if (ehLinkMercadoLivre(linkAfiliado)) {
+        return resolverLinkMercadoLivre(linkAfiliado);
+    }
+
+    if (ehLinkAmazon(linkAfiliado)) {
+        return resolverLinkAmazon(linkAfiliado);
+    }
+
+    throw new Error('Marketplace não suportado para resolução automática.');
+
+}
+
 module.exports = {
     ehLinkMercadoLivre,
-    resolverLinkMercadoLivre
+    ehLinkAmazon,
+    ehLinkConhecido,
+    resolverLinkMercadoLivre,
+    resolverLinkAmazon,
+    resolverLinkAfiliado
 };

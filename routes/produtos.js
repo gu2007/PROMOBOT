@@ -6,16 +6,17 @@ const {
     salvarProdutos,
     adicionarProduto
 } = require("../produtos");
-const { ehLinkMercadoLivre, resolverLinkMercadoLivre } = require("../resolvedorAfiliado");
+const { ehLinkConhecido, resolverLinkAfiliado } = require("../resolvedorAfiliado");
 
 // ======================================
 // Dispara em segundo plano (sem atrasar a resposta pro navegador) a
-// resolução automática do link original + imagem, quando o produto é do
-// Mercado Livre e ainda está faltando algum desses dois campos.
+// resolução automática do link original + imagem, quando o produto é de um
+// marketplace conhecido (Mercado Livre ou Amazon) e ainda está faltando
+// algum desses dois campos.
 // ======================================
 function dispararResolucaoSeNecessario(produto) {
 
-    if (!produto || !ehLinkMercadoLivre(produto.linkAfiliado)) {
+    if (!produto || !ehLinkConhecido(produto.linkAfiliado)) {
         return;
     }
 
@@ -23,7 +24,7 @@ function dispararResolucaoSeNecessario(produto) {
         return;
     }
 
-    resolverLinkMercadoLivre(produto.linkAfiliado)
+    resolverLinkAfiliado(produto.linkAfiliado)
         .then(resultado => {
 
             const produtos = listarProdutos();
@@ -73,10 +74,10 @@ router.get("/", (req, res) => {
 
 // ======================================
 // RESOLVER EM MASSA: roda a resolução automática (link original + imagem)
-// em todos os produtos do Mercado Livre que ainda estão com algum desses
-// campos vazio — útil pra completar produtos antigos, cadastrados antes
-// dessa funcionalidade existir. Mostra o progresso em tempo real (SSE),
-// produto por produto, igual à Verificação de Preços.
+// em todos os produtos do Mercado Livre e Amazon que ainda estão com algum
+// desses campos vazio — útil pra completar produtos antigos, cadastrados
+// antes dessa funcionalidade existir. Mostra o progresso em tempo real
+// (SSE), produto por produto, igual à Verificação de Preços.
 // ======================================
 router.post("/resolver-pendentes", async (req, res) => {
 
@@ -92,7 +93,7 @@ router.post("/resolver-pendentes", async (req, res) => {
     const todosOsProdutos = listarProdutos();
 
     const pendentes = todosOsProdutos.filter(produto =>
-        ehLinkMercadoLivre(produto.linkAfiliado) && (!produto.linkOriginal || !produto.imagem)
+        ehLinkConhecido(produto.linkAfiliado) && (!produto.linkOriginal || !produto.imagem)
     );
 
     enviarEvento("inicio", { total: pendentes.length });
@@ -104,7 +105,7 @@ router.post("/resolver-pendentes", async (req, res) => {
 
         try {
 
-            const resultado = await resolverLinkMercadoLivre(produto.linkAfiliado);
+            const resultado = await resolverLinkAfiliado(produto.linkAfiliado);
 
             const produtosAtuais = listarProdutos();
             const indice = produtosAtuais.findIndex(p => p.id === produto.id);
