@@ -103,6 +103,8 @@ router.post("/resolver-pendentes", async (req, res) => {
 
     for (const produto of pendentes) {
 
+        console.log(`🔎 Resolvendo #${produto.id} (${produto.marketplace}): ${produto.titulo.slice(0, 50)}`);
+
         try {
 
             const resultado = await resolverLinkAfiliado(produto.linkAfiliado);
@@ -140,6 +142,7 @@ router.post("/resolver-pendentes", async (req, res) => {
             enviarEvento("produto", {
                 produtoId: produto.id,
                 titulo: produto.titulo,
+                marketplace: produto.marketplace,
                 sucesso: mudouAlgumaCoisa
             });
 
@@ -150,11 +153,17 @@ router.post("/resolver-pendentes", async (req, res) => {
             enviarEvento("produto", {
                 produtoId: produto.id,
                 titulo: produto.titulo,
+                marketplace: produto.marketplace,
                 sucesso: false,
                 erro: erro.message
             });
 
         }
+
+        // Pequena pausa entre cada resolução, pra reduzir a chance de o
+        // marketplace detectar o volume de acessos automatizados seguidos
+        // e reforçar o bloqueio.
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
     }
 

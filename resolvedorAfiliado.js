@@ -80,6 +80,8 @@ async function resolverLinkMercadoLivre(linkAfiliado) {
                 timeout: 20000
             });
 
+            console.log(`🔬 [diagnóstico ML] "${linkAfiliado}" -> chegou em: ${pagina.url()}`);
+
             const resultado = await pagina.evaluate(() => {
 
                 const links = Array.from(document.querySelectorAll('a[href]'));
@@ -97,7 +99,14 @@ async function resolverLinkMercadoLivre(linkAfiliado) {
 
             });
 
+            console.log(`🔬 [diagnóstico ML] resultado:`, JSON.stringify(resultado));
+
             return resultado;
+
+        } catch (erro) {
+
+            console.log(`🔬 [diagnóstico ML] ERRO em "${linkAfiliado}": ${erro.message}`);
+            throw erro;
 
         } finally {
 
@@ -143,6 +152,13 @@ async function resolverLinkAmazon(linkAfiliado) {
 
             linkOriginal = pagina.url().split('?')[0];
 
+            console.log(`🔬 [diagnóstico Amazon] "${linkAfiliado}" -> chegou em: ${linkOriginal}`);
+
+        } catch (erro) {
+
+            console.log(`🔬 [diagnóstico Amazon] ERRO ao resolver o link "${linkAfiliado}": ${erro.message}`);
+            throw erro;
+
         } finally {
 
             await pagina.close();
@@ -159,7 +175,11 @@ async function resolverLinkAmazon(linkAfiliado) {
                     headers: { 'User-Agent': USER_AGENT }
                 });
 
+                console.log(`🔬 [diagnóstico Amazon] status do fetch da página final: ${resposta.status}`);
+
                 const html = await resposta.text();
+
+                console.log(`🔬 [diagnóstico Amazon] tamanho da página: ${html.length} caracteres`);
 
                 const correspondencia = html.match(
                     /https:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9+\-_]+\._AC_SL1500_\.jpg/i
@@ -167,7 +187,11 @@ async function resolverLinkAmazon(linkAfiliado) {
 
                 imagem = correspondencia ? correspondencia[0] : null;
 
+                console.log(`🔬 [diagnóstico Amazon] imagem encontrada: ${imagem || 'NÃO ENCONTRADA'}`);
+
             } catch (erro) {
+
+                console.log(`🔬 [diagnóstico Amazon] ERRO ao buscar a imagem em "${linkOriginal}": ${erro.message}`);
 
                 // Se essa parte falhar, não tem problema — pelo menos o
                 // link original já foi resolvido com sucesso.
