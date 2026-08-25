@@ -78,6 +78,9 @@ router.get("/", (req, res) => {
 // desses campos vazio — útil pra completar produtos antigos, cadastrados
 // antes dessa funcionalidade existir. Mostra o progresso em tempo real
 // (SSE), produto por produto, igual à Verificação de Preços.
+//
+// Aceita opcionalmente { produtoIds: [1, 2] } no corpo, pra testar só em
+// alguns produtos específicos em vez de todos os pendentes de uma vez.
 // ======================================
 router.post("/resolver-pendentes", async (req, res) => {
 
@@ -92,9 +95,16 @@ router.post("/resolver-pendentes", async (req, res) => {
 
     const todosOsProdutos = listarProdutos();
 
-    const pendentes = todosOsProdutos.filter(produto =>
+    const idsEspecificos = req.body && Array.isArray(req.body.produtoIds) ? req.body.produtoIds : null;
+
+    let pendentes = todosOsProdutos.filter(produto =>
         ehLinkConhecido(produto.linkAfiliado) && (!produto.linkOriginal || !produto.imagem)
     );
+
+    if (idsEspecificos && idsEspecificos.length > 0) {
+        const idsSet = new Set(idsEspecificos.map(Number));
+        pendentes = pendentes.filter(produto => idsSet.has(produto.id));
+    }
 
     enviarEvento("inicio", { total: pendentes.length });
 
