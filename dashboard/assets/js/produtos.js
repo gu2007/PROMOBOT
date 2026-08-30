@@ -129,6 +129,12 @@ function montarCartaoProduto(produto) {
         badges += ` <span class="badge badge-aviso">Link a confirmar</span>`;
     }
 
+    const temDescontoReal = produto.precoAntigo && Number(produto.precoAntigo) > Number(produto.preco);
+
+    const precoHtml = temDescontoReal
+        ? `<s style="color:var(--cor-texto-terciario); font-size:12px; font-weight:400;">R$ ${produto.precoAntigo}</s> R$ ${produto.preco}`
+        : `R$ ${produto.preco}`;
+
     cartao.innerHTML = `
         <div class="imagemProduto">
             ${imagemHtml}
@@ -144,7 +150,7 @@ function montarCartaoProduto(produto) {
         <div class="corpoProduto">
             <p class="idProduto">ID: ${produto.id}</p>
             <p class="tituloProduto">${produto.titulo}</p>
-            <p class="precoProduto">R$ ${produto.preco}</p>
+            <p class="precoProduto">${precoHtml}</p>
             <div>${badges}</div>
             <div class="acoesProduto">
                 <button onclick="alterarStatus(${produto.id})">${produto.ativo ? "Desativar" : "Ativar"}</button>
@@ -388,10 +394,10 @@ function adicionarLinhaLogResolucao(texto, tipo) {
 
 // ======================================
 // Dispara a resolução automática (link original + imagem) em todos os
-// produtos do Mercado Livre que ainda estão com algum campo faltando —
-// útil pra completar produtos antigos, cadastrados antes dessa
-// funcionalidade existir. Mostra o progresso produto por produto,
-// em tempo real, via streaming (SSE).
+// produtos do Mercado Livre e Amazon que ainda estão com algum campo
+// faltando — útil pra completar produtos antigos, cadastrados antes dessa
+// funcionalidade existir. Mostra o progresso produto por produto, em tempo
+// real, via streaming (SSE).
 // ======================================
 async function resolverPendentes() {
 
@@ -480,8 +486,59 @@ async function resolverPendentes() {
 
 }
 
+// ======================================
+// Corrige de uma vez todos os produtos ativos que não têm desconto real
+// (sem preço antigo, ou preço antigo não maior que o atual), desativando
+// eles. Não usa IA nenhuma — é só um filtro nos dados que já temos, então é
+// instantâneo.
+// ======================================
+async function corrigirSemDesconto() {
+
+    const botao = document.getElementById("btnCorrigirSemDesconto");
+    const mensagem = document.getElementById("mensagemResolucao");
+
+    botao.disabled = true;
+    mensagem.className = "mensagemFormulario";
+    mensagem.textContent = "Verificando produtos sem desconto real...";
+
+    try {
+
+        const resposta = await fetch("/api/produtos/corrigir-sem-desconto", { method: "POST" });
+        const resultado = await resposta.json();
+
+        if (resultado.sucesso) {
+
+            mensagem.className = "mensagemFormulario sucesso";
+            mensagem.textContent = resultado.corrigidos > 0
+                ? `${resultado.corrigidos} produto(s) sem desconto real foram desativados.`
+                : "Nenhum produto sem desconto real encontrado — está tudo certo.";
+
+            carregarProdutos();
+
+        } else {
+
+            mensagem.className = "mensagemFormulario erro";
+            mensagem.textContent = resultado.mensagem || "Erro ao corrigir produtos.";
+
+        }
+
+    } catch (erro) {
+
+        mensagem.className = "mensagemFormulario erro";
+        mensagem.textContent = `Erro de conexão: ${erro.message}`;
+
+    }
+
+    botao.disabled = false;
+
+}
+
 document
     .getElementById("btnResolverPendentes")
     .addEventListener("click", resolverPendentes);
+
+document
+    .getElementById("btnCorrigirSemDesconto")
+    .addEventListener("click", corrigirSemDesconto);
 
 carregarProdutos();

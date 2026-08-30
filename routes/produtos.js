@@ -4,7 +4,8 @@ const {
     listarProdutos,
     buscarProduto,
     salvarProdutos,
-    adicionarProduto
+    adicionarProduto,
+    produtoSemDescontoReal
 } = require("../produtos");
 const { ehLinkConhecido, resolverLinkAfiliado } = require("../resolvedorAfiliado");
 
@@ -24,7 +25,7 @@ function dispararResolucaoSeNecessario(produto) {
         return;
     }
 
-    resolverLinkAfiliado(produto.linkAfiliado)
+    resolverLinkAfiliado(produto.linkAfiliado, produto.titulo)
         .then(resultado => {
 
             const produtos = listarProdutos();
@@ -73,6 +74,45 @@ router.get("/", (req, res) => {
 });
 
 // ======================================
+// CORRIGIR PRODUTOS SEM DESCONTO REAL: desativa (sem gastar nenhum crédito
+// de IA, é só um filtro nos dados que já temos) todo produto ativo que não
+// tenha um preço antigo maior que o preço atual — ou seja, que não seja
+// uma promoção de verdade. Útil pra corrigir de uma vez produtos que
+// entraram assim antes dessa regra existir.
+// ======================================
+router.post("/corrigir-sem-desconto", (req, res) => {
+
+    try {
+
+        const produtos = listarProdutos();
+        let corrigidos = 0;
+
+        produtos.forEach(produto => {
+
+            if (produto.ativo && produtoSemDescontoReal(produto)) {
+                produto.ativo = false;
+                produto.atualizadoEm = new Date().toISOString();
+                corrigidos++;
+            }
+
+        });
+
+        if (corrigidos > 0) {
+            salvarProdutos(produtos);
+        }
+
+        res.json({ sucesso: true, corrigidos });
+
+    } catch (erro) {
+
+        console.error(erro);
+        res.status(500).json({ sucesso: false, mensagem: "Erro ao corrigir produtos sem desconto." });
+
+    }
+
+});
+
+// ======================================
 // RESOLVER EM MASSA: roda a resolução automática (link original + imagem)
 // em todos os produtos do Mercado Livre e Amazon que ainda estão com algum
 // desses campos vazio — útil pra completar produtos antigos, cadastrados
@@ -117,7 +157,7 @@ router.post("/resolver-pendentes", async (req, res) => {
 
         try {
 
-            const resultado = await resolverLinkAfiliado(produto.linkAfiliado);
+            const resultado = await resolverLinkAfiliado(produto.linkAfiliado, produto.titulo);
 
             const produtosAtuais = listarProdutos();
             const indice = produtosAtuais.findIndex(p => p.id === produto.id);
@@ -243,6 +283,13 @@ router.put("/:id", (req, res) => {
         criadoEm: produtos[indice].criadoEm,
         atualizadoEm: new Date().toISOString()
     };
+
+    // Nunca deixa ativo um produto sem desconto real, mesmo que a edição
+    // manual tenha pedido pra ativar.
+    if (produtoSemDescontoReal(produtos[indice])) {
+        produtos[indice].ativo = false;
+    }
+
     salvarProdutos(produtos);
     res.json({
         sucesso: true,

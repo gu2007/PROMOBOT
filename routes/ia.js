@@ -34,17 +34,19 @@ Extraia até 10 produtos únicos, seguindo estas regras obrigatórias:
 
 1. DEDUPLICAÇÃO: se o mesmo produto aparecer sendo vendido por vendedores diferentes, escolha apenas UMA ocorrência — a de melhor preço ou maior desconto.
 
-2. DIVERSIDADE: não repita o mesmo tipo de produto. Se houver várias opções do mesmo tipo (ex: várias furadeiras), escolha só a de melhor oferta, priorizando diversidade entre tipos de produto.
+2. DESCONTO OBRIGATÓRIO: só inclua um produto se ele mostrar CLARAMENTE um preço antigo/riscado (de) MAIOR que o preço atual (por) — ou seja, uma promoção de verdade. Se o anúncio mostrar só um preço único, sem nenhum valor riscado/anterior visível, NÃO inclua esse produto na lista, mesmo que pareça uma boa oferta.
 
-3. IGNORE anúncios patrocinados/publicidade que não pareçam parte da lista principal de resultados, e ignore "outras opções de compra" secundárias do mesmo anúncio — considere só a oferta principal de cada produto.
+3. DIVERSIDADE: não repita o mesmo tipo de produto. Se houver várias opções do mesmo tipo (ex: várias furadeiras), escolha só a de melhor oferta, priorizando diversidade entre tipos de produto.
 
-4. Use SOMENTE os dados que você conseguir ver claramente na fonte fornecida. Se um campo não estiver visível ou você não tiver certeza, use null — nunca invente ou estime um valor.
+4. IGNORE anúncios patrocinados/publicidade que não pareçam parte da lista principal de resultados, e ignore "outras opções de compra" secundárias do mesmo anúncio — considere só a oferta principal de cada produto.
 
-5. NÃO inclua nenhum link nesta etapa — isso será feito separadamente pelo usuário depois.
+5. Use SOMENTE os dados que você conseguir ver claramente na fonte fornecida. Se um campo não estiver visível ou você não tiver certeza, use null — nunca invente ou estime um valor.
 
-6. MARKETPLACE: identifique corretamente de qual site cada produto veio, com base no conteúdo/URL da fonte fornecida. Use EXATAMENTE um destes três valores (nunca outro): "mercadolivre", "amazon" ou "shopee". Não copie um valor fixo — cada produto deve refletir o marketplace real de onde ele veio.
+6. NÃO inclua nenhum link nesta etapa — isso será feito separadamente pelo usuário depois.
 
-7. Retorne EXATAMENTE neste formato JSON (mesmos nomes de campos):
+7. MARKETPLACE: identifique corretamente de qual site cada produto veio, com base no conteúdo/URL da fonte fornecida. Use EXATAMENTE um destes três valores (nunca outro): "mercadolivre", "amazon" ou "shopee". Não copie um valor fixo — cada produto deve refletir o marketplace real de onde ele veio.
+
+8. Retorne EXATAMENTE neste formato JSON (mesmos nomes de campos):
 
 [
   {

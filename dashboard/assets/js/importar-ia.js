@@ -363,7 +363,10 @@ function renderizarResultados() {
 }
 
 // ======================================
-// Salvar os produtos selecionados (igual para as 3 formas)
+// Salvar os produtos selecionados (igual para as 3 formas). Se o link de
+// afiliado já foi preenchido, o produto entra ATIVO direto na lista — não
+// precisa de segurança extra, já que sem link ele nem seria divulgado
+// mesmo. Se o link ficou em branco, entra inativo, do jeito de sempre.
 // ======================================
 async function salvarSelecionados() {
 
@@ -405,7 +408,7 @@ async function salvarSelecionados() {
             linkAfiliado: linkDigitado || 'LINK_NAO_CONFIRMADO',
             linkOriginal: linkOriginalDigitado || null,
             texto: produto.texto,
-            ativo: false
+            ativo: !!linkDigitado
         };
 
         try {
@@ -451,7 +454,7 @@ async function salvarSelecionados() {
         mensagemStatus.innerHTML = `${salvos} salvo(s), <strong>${falhas} falharam</strong>. Último erro: ${ultimoErro}`;
     } else {
         mensagemStatus.className = 'mensagemFormulario sucesso';
-        mensagemStatus.textContent = `${salvos} produto(s) salvo(s) como inativo. Vá em Produtos para revisar e ativar cada um.`;
+        mensagemStatus.textContent = `${salvos} produto(s) salvo(s). Os que já tinham link de afiliado entraram ativos; os demais entraram inativos até você preencher o link.`;
     }
 
     if (salvos > 0) {

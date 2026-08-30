@@ -1,32 +1,18 @@
 ﻿<!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Produtos - PROMOBOT</title>
-
     <link rel="stylesheet" href="assets/css/style.css">
-
 </head>
-
 <body>
-
     <button class="botaoMenu" id="botaoMenu" aria-label="Abrir menu">☰</button>
-
     <div class="overlayMenu" id="overlayMenu"></div>
-
     <aside class="sidebar" id="sidebar">
-
         <h2>PROMOBOT</h2>
-
         <nav>
-
             <a href="/">Dashboard</a>
-
             <details class="grupoMenu" open>
                 <summary>Produtos</summary>
                 <div class="submenu">
@@ -37,41 +23,25 @@
                     <a href="/alteracoes">Alterações</a>
                 </div>
             </details>
-
             <a href="#">Divulgações</a>
-
             <a href="/configuracoes">Configurações</a>
-
             <a href="#">Estatísticas</a>
-
             <a href="#">Logs</a>
-
         </nav>
-
     </aside>
-
     <main>
-
         <h1 style="margin-bottom:16px;">Produtos</h1>
-
         <input type="text" id="filtroBusca" class="campoBusca" placeholder="Buscar por título...">
-
         <div class="abasMarketplace" id="abasMarketplace"></div>
-
-        <div style="margin-bottom:16px;">
+        <div style="margin-bottom:16px; display:flex; gap:8px; flex-wrap:wrap;">
             <button id="btnResolverPendentes" class="botaoSecundario">Preencher fotos e links faltantes (Mercado Livre e Amazon)</button>
-            <p id="mensagemResolucao" class="mensagemFormulario"></p>
-            <div id="areaResolucao" class="logAtividade" style="display:none; margin-top:10px; max-width:600px;"></div>
+            <button id="btnCorrigirSemDesconto" class="botaoSecundario">Corrigir produtos sem desconto real</button>
         </div>
-
+        <p id="mensagemResolucao" class="mensagemFormulario"></p>
+        <div id="areaResolucao" class="logAtividade" style="display:none; margin-top:10px; margin-bottom:16px; max-width:600px;"></div>
         <div id="gradeProdutosContainer"></div>
-
     </main>
-
     <script src="assets/js/produtos.js"></script>
-
     <script src="assets/js/menu.js"></script>
-
 </body>
-
 </html>

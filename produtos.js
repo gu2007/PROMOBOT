@@ -130,6 +130,25 @@ function encontrarDuplicataSuspeita(produtoNovo, produtosExistentes) {
 
 }
 
+// ======================================
+// Um produto só conta como "com desconto real" se tiver um preço antigo
+// preenchido E esse preço antigo for de fato maior que o preço atual. Sem
+// isso, não é uma promoção de verdade — só um preço normal, e por isso o
+// produto não deve ficar ativo (nem ser mandado pro grupo).
+// ======================================
+function produtoSemDescontoReal(produto) {
+
+    const precoAntigo = Number(produto.precoAntigo);
+    const preco = Number(produto.preco);
+
+    if (!precoAntigo || isNaN(precoAntigo)) return true;
+    if (isNaN(preco)) return true;
+    if (precoAntigo <= preco) return true;
+
+    return false;
+
+}
+
 function carregarProdutos() {
     if (!fs.existsSync(PRODUCTS_PATH)) return [];
 
@@ -171,6 +190,11 @@ function adicionarProduto(produtoNovo) {
 
         existente.atualizadoEm = new Date().toISOString();
 
+        // Nunca deixa ativo um produto sem desconto real, mesmo numa atualização
+        if (produtoSemDescontoReal(existente)) {
+            existente.ativo = false;
+        }
+
     } else {
 
         produtoNovo.id =
@@ -204,6 +228,13 @@ function adicionarProduto(produtoNovo) {
             produtoNovo.duplicataSuspeita = false;
             produtoNovo.duplicataDeId = null;
 
+        }
+
+        // Nunca deixa ativo um produto sem desconto real (preço antigo
+        // ausente ou não maior que o preço atual) — isso tem prioridade
+        // sobre qualquer outra decisão de ativação.
+        if (produtoSemDescontoReal(produtoNovo)) {
+            produtoNovo.ativo = false;
         }
 
         produtos.push(produtoNovo);
@@ -414,6 +445,8 @@ module.exports = {
     buscarProduto,
 
     adicionarProduto,
+
+    produtoSemDescontoReal,
 
     proximoProduto,
 
