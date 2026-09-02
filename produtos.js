@@ -450,6 +450,12 @@ module.exports = {
     proximoProduto,
 
     aplicarResultadoVerificacao,
-    listarAlteracoesDetectadas
+    listarAlteracoesDetectadas,
+
+    // Exportadas pra serem reaproveitadas pelo buscador automático de produto
+    // no Mercado Livre (resolvedorAfiliado.js), em vez de duplicar a lógica
+    // de comparação de título/preço em dois lugares.
+    calcularSimilaridadeTitulos,
+    precosSaoProximos
 
 };

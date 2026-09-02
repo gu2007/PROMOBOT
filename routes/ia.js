@@ -5,6 +5,7 @@ const path = require('path');
 const multer = require('multer');
 const mammoth = require('mammoth');
 const { GoogleGenAI } = require('@google/genai');
+const { encontrarProdutoMercadoLivre } = require('../resolvedorAfiliado');
 
 const CONFIG_PATH = path.join(__dirname, '..', 'config.json');
 
@@ -83,6 +84,60 @@ function processarRespostaIA(textoResposta) {
     });
 
     return produtos;
+
+}
+
+// ======================================
+// NOVO: depois que a IA extrai os produtos, tenta achar sozinho o link real
+// de cada produto do Mercado Livre (busca pública + comparação de título e
+// preço — sem depender da API de afiliados nem da API de busca do ML).
+//
+// Pra cada produto do Mercado Livre:
+//  - match CONFIANTE -> preenche linkOriginal e imagem sozinho, marca
+//    matchMercadoLivre: 'confiante'
+//  - AMBÍGUO -> não preenche o link, mas anexa até 3 candidatos em
+//    candidatosMercadoLivre, pra você escolher na tela de revisão em vez de
+//    garimpar a busca inteira
+//  - não encontrado / erro -> não mexe em nada, cai no fluxo manual de hoje
+//
+// Produtos de outros marketplaces (Amazon, Shopee) não são tocados aqui.
+// Roda um produto de cada vez (respeitando a fila do resolvedorAfiliado) e
+// avisa o progresso via SSE, já que pode levar alguns segundos por produto.
+// ======================================
+async function buscarLinksMercadoLivrePorProduto(produtos, res) {
+
+    const produtosML = produtos.filter(p => p.marketplace === 'mercadolivre');
+
+    if (produtosML.length === 0) return;
+
+    for (let i = 0; i < produtosML.length; i++) {
+
+        const produto = produtosML[i];
+
+        enviarEvento(res, 'status', {
+            mensagem: `Procurando "${produto.titulo}" no Mercado Livre (${i + 1}/${produtosML.length})...`
+        });
+
+        const resultado = await encontrarProdutoMercadoLivre(produto);
+
+        if (resultado.status === 'confiante') {
+
+            produto.linkOriginal = resultado.linkOriginal;
+            if (resultado.imagem) produto.imagem = resultado.imagem;
+            produto.matchMercadoLivre = 'confiante';
+
+        } else if (resultado.status === 'ambiguo') {
+
+            produto.candidatosMercadoLivre = resultado.candidatos;
+            produto.matchMercadoLivre = 'ambiguo';
+
+        } else {
+
+            produto.matchMercadoLivre = 'nao_encontrado';
+
+        }
+
+    }
 
 }
 
@@ -221,6 +276,8 @@ router.post('/extrair', async (req, res) => {
 
         const produtos = processarRespostaIA(textoResposta);
 
+        await buscarLinksMercadoLivrePorProduto(produtos, res);
+
         enviarEvento(res, 'final', { sucesso: true, produtos });
         res.end();
 
@@ -324,6 +381,8 @@ router.post('/extrair-arquivo', upload.single('arquivo'), async (req, res) => {
 
         const produtos = processarRespostaIA(textoResposta);
 
+        await buscarLinksMercadoLivrePorProduto(produtos, res);
+
         enviarEvento(res, 'final', { sucesso: true, produtos });
         res.end();
 
@@ -382,6 +441,8 @@ router.post('/extrair-texto', async (req, res) => {
         }, res);
 
         const produtos = processarRespostaIA(textoResposta);
+
+        await buscarLinksMercadoLivrePorProduto(produtos, res);
 
         enviarEvento(res, 'final', { sucesso: true, produtos });
         res.end();

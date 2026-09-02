@@ -1,4 +1,5 @@
 ﻿const puppeteer = require('puppeteer');
+const { calcularSimilaridadeTitulos, precosSaoProximos } = require('./produtos');
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
@@ -405,11 +406,249 @@ async function resolverLinkAfiliado(linkAfiliado, tituloEsperado) {
 
 }
 
+// ==========================================================================
+// NOVO: busca automática de produto no Mercado Livre por título + preço
+// ==========================================================================
+//
+// Objetivo: dado um produto que a IA já extraiu (título, preço, preço
+// antigo), achar sozinho o link real do produto no Mercado Livre — sem
+// depender da API de busca (que hoje está retornando 403 pra muita gente,
+// mesmo autenticada) e sem você precisar garimpar manualmente.
+//
+// Como funciona:
+//  1) Abre a página pública de busca do ML com o título do produto
+//     (mesmo navegador/fila do resto do resolvedor).
+//  2) Extrai candidatos da página renderizada (título, preço, preço antigo,
+//     link, imagem) — usando o padrão de URL de produto (/MLB-\d+/ ou
+//     /p/MLB\d+/) em vez de nomes de classe CSS, porque o Mercado Livre
+//     muda os nomes de classe com frequência mas o padrão de URL do
+//     produto é estável.
+//  3) Compara cada candidato com o produto da IA usando as MESMAS funções
+//     de similaridade de título e proximidade de preço que o sistema já
+//     usa pra detectar duplicata (calcularSimilaridadeTitulos,
+//     precosSaoProximos) — reaproveitando lógica já validada, em vez de
+//     inventar um critério novo do zero.
+//  4) Decide:
+//     - Se o melhor candidato bate os dois critérios (similaridade >= 0.6
+//       E preço a até 15% de diferença): match CONFIANTE, preenche sozinho.
+//     - Senão: devolve os 3 melhores candidatos por similaridade, pra você
+//       escolher manualmente (muito mais rápido que garimpar a busca
+//       inteira).
+//     - Se a busca não achar nenhum candidato: relata "não encontrado".
+// ==========================================================================
+
+const SIMILARIDADE_MINIMA_MATCH_CONFIANTE = 0.6;
+
+// ======================================
+// Abre a página de busca pública do ML e extrai os candidatos visíveis.
+// Retorna um array (pode vir vazio se a busca não achar nada, ou se a
+// extração falhar por mudança de layout — nesse caso NUNCA lança erro pra
+// não quebrar a importação inteira, só loga o diagnóstico e devolve []).
+// ======================================
+async function buscarProdutosMercadoLivre(termoBusca) {
+
+    return enfileirar(async () => {
+
+        const navegador = await obterNavegador();
+        const pagina = await navegador.newPage();
+
+        try {
+
+            await pagina.setUserAgent(USER_AGENT);
+
+            const url = `https://lista.mercadolivre.com.br/${encodeURIComponent(termoBusca)}`;
+
+            await pagina.goto(url, {
+                waitUntil: 'networkidle2',
+                timeout: 20000
+            });
+
+            console.log(`🔬 [diagnóstico busca ML] "${termoBusca}" -> chegou em: ${pagina.url()}`);
+
+            const candidatos = await pagina.evaluate(() => {
+
+                // Produto real no ML sempre tem um ID no padrão MLB seguido
+                // de dígitos, seja como "/MLB-1234567890-titulo" ou
+                // "/p/MLB12345678" (produto de catálogo). Esse padrão é bem
+                // mais estável do que nomes de classe CSS, que o Mercado
+                // Livre reformula com frequência.
+                const padraoProduto = /MLB-?\d{8,}/;
+
+                const ancoras = Array.from(document.querySelectorAll('a[href]'))
+                    .filter(a => padraoProduto.test(a.href));
+
+                // Evita processar a mesma "carta" de produto duas vezes,
+                // caso tenha mais de um link apontando pra ela (ex: link na
+                // foto E link no título).
+                const containersJaVistos = new Set();
+                const resultado = [];
+
+                ancoras.forEach(a => {
+
+                    // Sobe até achar um container razoável da "carta" do
+                    // produto (onde título, preço e imagem moram juntos).
+                    let container = a.closest('li') || a.closest('article') || a.parentElement;
+
+                    if (!container || containersJaVistos.has(container)) return;
+                    containersJaVistos.add(container);
+
+                    // Título: o alt da imagem principal costuma ser o nome
+                    // completo e "limpo" do produto, mais confiável do que
+                    // tentar montar o título a partir de texto solto.
+                    const imagemEl = container.querySelector('img');
+                    const titulo = (imagemEl && (imagemEl.alt || '')).trim() || (a.innerText || '').trim();
+
+                    if (!titulo) return;
+
+                    // Preço: pega todos os trechos "R$ 1.234,56" no texto do
+                    // container. O preço RISCADO (antigo) normalmente fica
+                    // dentro de uma tag <s>; o preço atual é o que sobra.
+                    function extrairNumero(texto) {
+                        const limpo = texto.replace(/[^\d,]/g, '').replace(',', '.');
+                        const numero = parseFloat(limpo);
+                        return isNaN(numero) ? null : numero;
+                    }
+
+                    const elementoPrecoAntigo = container.querySelector('s');
+                    const precoAntigo = elementoPrecoAntigo
+                        ? extrairNumero(elementoPrecoAntigo.innerText || '')
+                        : null;
+
+                    // Remove qualquer menção de parcelamento ("12x R$ 20,82"
+                    // etc.) ANTES de procurar preços — senão o valor da
+                    // parcela (sempre o menor "R$" do texto) seria
+                    // confundido com o preço à vista real.
+                    const textoContainer = (container.innerText || '')
+                        .replace(/\d+\s*x\s*R\$\s?[\d.,]+/gi, '');
+
+                    const todosOsPrecos = Array.from(
+                        textoContainer.matchAll(/R\$\s?[\d.,]+/g)
+                    ).map(m => extrairNumero(m[0])).filter(n => n !== null);
+
+                    // O preço atual é o menor valor de "R$" encontrado que
+                    // NÃO seja o preço antigo riscado (quando existe um
+                    // desconto, o valor à vista é sempre o menor).
+                    let preco = null;
+                    if (todosOsPrecos.length > 0) {
+                        const semAntigo = precoAntigo
+                            ? todosOsPrecos.filter(p => p !== precoAntigo)
+                            : todosOsPrecos;
+                        preco = semAntigo.length > 0 ? Math.min(...semAntigo) : todosOsPrecos[0];
+                    }
+
+                    const link = a.href.split('?')[0];
+                    const imagem = imagemEl ? (imagemEl.src || imagemEl.getAttribute('data-src') || null) : null;
+
+                    resultado.push({ titulo, preco, precoAntigo, link, imagem });
+
+                });
+
+                return resultado;
+
+            });
+
+            console.log(`🔬 [diagnóstico busca ML] "${termoBusca}" -> ${candidatos.length} candidato(s) extraído(s)`);
+
+            return candidatos;
+
+        } catch (erro) {
+
+            console.log(`🔬 [diagnóstico busca ML] ERRO ao buscar "${termoBusca}": ${erro.message}`);
+            return [];
+
+        } finally {
+
+            await pagina.close();
+
+        }
+
+    });
+
+}
+
+// ======================================
+// Pontua e decide: recebe o produto que a IA extraiu + a lista de
+// candidatos reais da busca, e devolve um resultado com um destes status:
+//
+//  - "confiante"     -> achou um candidato claro, já preenche sozinho
+//  - "ambiguo"        -> devolve até 3 melhores candidatos pra escolha manual
+//  - "nao_encontrado" -> a busca não trouxe nenhum candidato utilizável
+//
+// Extraída como função separada (sem Puppeteer) só pra poder ser testada
+// isoladamente, sem precisar de navegador de verdade.
+// ======================================
+function decidirMelhorCandidato(produtoIA, candidatos) {
+
+    const candidatosValidos = candidatos.filter(c => c.titulo && typeof c.preco === 'number');
+
+    if (candidatosValidos.length === 0) {
+        return { status: 'nao_encontrado' };
+    }
+
+    const pontuados = candidatosValidos.map(c => ({
+        ...c,
+        similaridade: calcularSimilaridadeTitulos(produtoIA.titulo, c.titulo)
+    }));
+
+    pontuados.sort((a, b) => b.similaridade - a.similaridade);
+
+    const melhor = pontuados[0];
+
+    const precoBate = precosSaoProximos(produtoIA.preco, melhor.preco);
+
+    if (melhor.similaridade >= SIMILARIDADE_MINIMA_MATCH_CONFIANTE && precoBate) {
+        return {
+            status: 'confiante',
+            linkOriginal: melhor.link,
+            imagem: melhor.imagem,
+            similaridade: melhor.similaridade
+        };
+    }
+
+    return {
+        status: 'ambiguo',
+        candidatos: pontuados.slice(0, 3).map(c => ({
+            titulo: c.titulo,
+            preco: c.preco,
+            precoAntigo: c.precoAntigo,
+            link: c.link,
+            imagem: c.imagem,
+            similaridade: c.similaridade
+        }))
+    };
+
+}
+
+// ======================================
+// Função de conveniência que junta busca + decisão — é essa que as rotas
+// vão chamar. Nunca lança erro (mesma filosofia do resto do resolvedor):
+// se algo falhar na busca, cai em "nao_encontrado" e a importação segue
+// normalmente, sem travar o restante dos produtos.
+// ======================================
+async function encontrarProdutoMercadoLivre(produtoIA) {
+
+    try {
+
+        const candidatos = await buscarProdutosMercadoLivre(produtoIA.titulo);
+        return decidirMelhorCandidato(produtoIA, candidatos);
+
+    } catch (erro) {
+
+        console.log(`🔬 [diagnóstico busca ML] ERRO inesperado ao processar "${produtoIA.titulo}": ${erro.message}`);
+        return { status: 'nao_encontrado' };
+
+    }
+
+}
+
 module.exports = {
     ehLinkMercadoLivre,
     ehLinkAmazon,
     ehLinkConhecido,
     resolverLinkMercadoLivre,
     resolverLinkAmazon,
-    resolverLinkAfiliado
+    resolverLinkAfiliado,
+    buscarProdutosMercadoLivre,
+    decidirMelhorCandidato,
+    encontrarProdutoMercadoLivre
 };
