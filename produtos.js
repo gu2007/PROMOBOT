@@ -275,6 +275,15 @@ function buscarProduto(id) {
 
 }
 
+// Embaralha um array no lugar (Fisher-Yates), sem viés de posição.
+function embaralhar(lista) {
+    for (let i = lista.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [lista[i], lista[j]] = [lista[j], lista[i]];
+    }
+    return lista;
+}
+
 function proximoProduto() {
 
     let intervaloHoras = 24;
@@ -294,30 +303,20 @@ function proximoProduto() {
         return horasDesdeEnvio >= intervaloHoras;
     });
 
-
     if (produtos.length === 0) return null;
 
-    produtos.sort((a, b) => {
+    // Prioridade continua sendo quem foi menos enviado (fairness/rotação) —
+    // isso é o que garante que todo produto tenha sua vez. A mudança é que,
+    // dentro do grupo de "quem foi enviado o mesmo número de vezes", a
+    // escolha agora é ALEATÓRIA em vez de seguir a ordem de cadastro (id)
+    // ou a data da última divulgação. Isso evita que produtos da mesma
+    // marca (cadastrados em sequência) saiam um atrás do outro.
+    const menorEnviado = Math.min(...produtos.map(p => p.enviado || 0));
+    const candidatos = produtos.filter(p => (p.enviado || 0) === menorEnviado);
 
-        const enviadosA = a.enviado || 0;
-        const enviadosB = b.enviado || 0;
+    embaralhar(candidatos);
 
-        if (enviadosA !== enviadosB)
-            return enviadosA - enviadosB;
-
-        const dataA = a.ultimaDivulgacao
-            ? new Date(a.ultimaDivulgacao)
-            : new Date(0);
-
-        const dataB = b.ultimaDivulgacao
-            ? new Date(b.ultimaDivulgacao)
-            : new Date(0);
-
-        return dataA - dataB;
-
-    });
-
-    const escolhido = produtos[0];
+    const escolhido = candidatos[0];
 
     const todos = carregarProdutos();
 
