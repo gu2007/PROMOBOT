@@ -269,18 +269,25 @@ async function buscarProdutosPorTexto() {
 // ======================================
 // Monta a URL de busca mecânica (sem IA) certa pra cada marketplace.
 //
-// Pro Mercado Livre, além do título, agora também aplica um filtro de
-// faixa de preço na própria URL (recurso "escondido" de busca do ML:
-// "_PriceRange_MIN-MAX"), com margem de 15% pra cima e pra baixo do preço
-// que a IA já extraiu. Isso estreita a busca de "dezenas de produtos
-// parecidos" pra só os poucos que também batem no preço — sem precisar de
-// nenhuma automação de servidor (o Mercado Livre não tem como saber que
-// essa busca foi "sugerida" por um sistema; pra ele é só um link comum que
-// você abriu no seu próprio navegador).
+// Pro Mercado Livre, aplica 3 filtros "escondidos" de URL do próprio site,
+// combinados, pra estreitar a busca do jeito mais preciso possível — tudo
+// rodando no SEU navegador (sem automação de servidor, então sem risco
+// nenhum de bloqueio por bot):
+//
+//  1) Título entre aspas — trata como frase, não palavras soltas.
+//  2) "_PriceRange_MINBRL-MAXBRL" — faixa de preço quase exata (arredonda
+//     só os centavos pra cima/baixo), em vez de uma margem ampla.
+//  3) "_Discount_MIN-MAX" — faixa de desconto calculada a partir do preço
+//     antigo e do preço atual que a IA já extraiu, com margem de 3 pontos
+//     percentuais pra cima e pra baixo (cobre pequenas diferenças de
+//     arredondamento entre o que a IA leu e o que o ML mostra agora).
+//  4) "_ITEM*CONDITION_2230284_" — só produtos NOVOS (nunca usados), já
+//     que é tudo que esse sistema cadastra.
+//
+// Cada filtro é opcional: se faltar preço ou preço antigo, o filtro
+// correspondente simplesmente não entra na URL — nunca quebra a busca.
 // ======================================
-function montarInfoBuscaMarketplace(marketplace, titulo, preco) {
-
-    const termoBusca = encodeURIComponent(titulo);
+function montarInfoBuscaMarketplace(marketplace, titulo, preco, precoAntigo) {
 
     const marketplaceNormalizado = (marketplace || '')
         .toString()
@@ -290,33 +297,46 @@ function montarInfoBuscaMarketplace(marketplace, titulo, preco) {
 
     if (marketplaceNormalizado === 'amazon') {
         return {
-            url: `https://www.amazon.com.br/s?k=${termoBusca}`,
+            url: `https://www.amazon.com.br/s?k=${encodeURIComponent(titulo)}`,
             rotulo: 'Amazon'
         };
     }
 
     if (marketplaceNormalizado === 'shopee') {
         return {
-            url: `https://shopee.com.br/search?keyword=${termoBusca}`,
+            url: `https://shopee.com.br/search?keyword=${encodeURIComponent(titulo)}`,
             rotulo: 'Shopee'
         };
     }
 
     // Padrão: Mercado Livre (também usado se a IA não identificar o marketplace)
-    let filtroPreco = '';
+    const termoBusca = encodeURIComponent(`"${titulo}"`);
+
+    let filtros = '';
 
     if (typeof preco === 'number' && preco > 0) {
 
-        const margem = 0.15;
-        const precoMinimo = Math.max(0, Math.floor(preco * (1 - margem)));
-        const precoMaximo = Math.ceil(preco * (1 + margem));
+        const precoMinimo = Math.floor(preco);
+        const precoMaximo = Math.ceil(preco);
 
-        filtroPreco = `_PriceRange_${precoMinimo}-${precoMaximo}`;
+        filtros += `_PriceRange_${precoMinimo}BRL-${precoMaximo}BRL`;
 
     }
 
+    if (typeof preco === 'number' && typeof precoAntigo === 'number' && precoAntigo > preco) {
+
+        const desconto = Math.round(((precoAntigo - preco) / precoAntigo) * 100);
+        const descontoMinimo = Math.max(0, desconto - 3);
+        const descontoMaximo = desconto + 3;
+
+        filtros += `_Discount_${descontoMinimo}-${descontoMaximo}`;
+
+    }
+
+    filtros += '_ITEM*CONDITION_2230284_NoIndex_True';
+
     return {
-        url: `https://lista.mercadolivre.com.br/${termoBusca}${filtroPreco}`,
+        url: `https://lista.mercadolivre.com.br/${termoBusca}${filtros}`,
         rotulo: 'Mercado Livre'
     };
 
@@ -336,7 +356,7 @@ function renderizarResultados() {
         const div = document.createElement('div');
         div.className = 'cartaoResultadoImportacao';
 
-        const infoBusca = montarInfoBuscaMarketplace(produto.marketplace, produto.titulo, produto.preco);
+        const infoBusca = montarInfoBuscaMarketplace(produto.marketplace, produto.titulo, produto.preco, produto.precoAntigo);
 
         const precoHtml = produto.precoAntigo
             ? `<s style="color:var(--cor-texto-terciario); font-size:13px;">R$ ${produto.precoAntigo}</s> R$ ${produto.preco}`
