@@ -15,7 +15,13 @@ function obterNavegador() {
     if (!promessaDoNavegador) {
         promessaDoNavegador = puppeteer.launch({
             headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                // Ajuda a esconder alguns sinais óbvios de automação que
+                // sites de e-commerce costumam checar pra bloquear bots.
+                '--disable-blink-features=AutomationControlled'
+            ]
         });
     }
 
@@ -455,6 +461,22 @@ async function buscarProdutosMercadoLivre(termoBusca) {
         try {
 
             await pagina.setUserAgent(USER_AGENT);
+
+            // Tentativa de disfarçar sinais comuns de automação, já que o
+            // ML está mandando essa busca pro portão de verificação de
+            // conta em 100% das tentativas (bloqueio por detecção de bot):
+            // - navigator.webdriver: sinalizador que o Chrome headless
+            //   deixa ligado por padrão, e que sites costumam checar.
+            // - viewport: o headless usa por padrão uma janela pequena e
+            //   atípica de usuário real (800x600); usamos um tamanho comum
+            //   de desktop.
+            // - Accept-Language: declara português, já que o site inteiro
+            //   é em pt-BR.
+            await pagina.evaluateOnNewDocument(() => {
+                Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            });
+            await pagina.setViewport({ width: 1366, height: 768 });
+            await pagina.setExtraHTTPHeaders({ 'Accept-Language': 'pt-BR,pt;q=0.9' });
 
             const url = `https://lista.mercadolivre.com.br/${encodeURIComponent(termoBusca)}`;
 
