@@ -465,6 +465,32 @@ async function buscarProdutosMercadoLivre(termoBusca) {
 
             console.log(`🔬 [diagnóstico busca ML] "${termoBusca}" -> chegou em: ${pagina.url()}`);
 
+            // O mesmo portão de verificação de conta que o resolverLinkMercadoLivre
+            // já contorna ao resolver link de afiliado também aparece aqui, ao abrir
+            // a busca direto. Em vez de tentar "passar" por ele, extraímos o destino
+            // real escondido no parâmetro "go=" e navegamos direto pra lá — sem isso,
+            // a extração de candidatos sempre roda em cima da página do portão (que
+            // não tem nenhum produto) e retorna 0 candidatos.
+            if (pagina.url().includes('account-verification')) {
+
+                const urlObj = new URL(pagina.url());
+                const destino = urlObj.searchParams.get('go');
+
+                if (destino) {
+
+                    console.log(`🔬 [diagnóstico busca ML] caiu no portão de verificação, indo direto pro destino real: ${destino}`);
+
+                    await pagina.goto(destino, {
+                        waitUntil: 'networkidle2',
+                        timeout: 20000
+                    });
+
+                    console.log(`🔬 [diagnóstico busca ML] depois do redirecionamento, chegou em: ${pagina.url()}`);
+
+                }
+
+            }
+
             const candidatos = await pagina.evaluate(() => {
 
                 // Produto real no ML sempre tem um ID no padrão MLB seguido
