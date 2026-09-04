@@ -284,8 +284,17 @@ async function buscarProdutosPorTexto() {
 //  4) "_ITEM*CONDITION_2230284_" — só produtos NOVOS (nunca usados), já
 //     que é tudo que esse sistema cadastra.
 //
-// Cada filtro é opcional: se faltar preço ou preço antigo, o filtro
-// correspondente simplesmente não entra na URL — nunca quebra a busca.
+// Pra Amazon, aplica a mesma ideia com os filtros oficiais e documentados
+// dela (via o parâmetro "rh", combinando refinamentos com vírgula):
+//
+//  1) Título entre aspas — mesma lógica de frase exata.
+//  2) "p_36:MINCENTAVOS-MAXCENTAVOS" — faixa de preço quase exata, em
+//     CENTAVOS (não reais — confirmado testando o filtro de preço real do
+//     site: R$80 a R$200 vira "8000-20000").
+//  3) "p_n_condition-type:13862762011" — só produtos NOVOS.
+//
+// Cada filtro é opcional: se faltar preço, o filtro de preço simplesmente
+// não entra na URL — nunca quebra a busca.
 // ======================================
 function montarInfoBuscaMarketplace(marketplace, titulo, preco, precoAntigo) {
 
@@ -296,10 +305,25 @@ function montarInfoBuscaMarketplace(marketplace, titulo, preco, precoAntigo) {
         .replace(/\s+/g, '');
 
     if (marketplaceNormalizado === 'amazon') {
+
+        const termoBuscaAmazon = encodeURIComponent(`"${titulo}"`);
+
+        let refinamentos = 'p_n_condition-type:13862762011';
+
+        if (typeof preco === 'number' && preco > 0) {
+
+            const minCentavos = Math.floor(preco) * 100;
+            const maxCentavos = Math.ceil(preco) * 100;
+
+            refinamentos = `p_36:${minCentavos}-${maxCentavos},${refinamentos}`;
+
+        }
+
         return {
-            url: `https://www.amazon.com.br/s?k=${encodeURIComponent(titulo)}`,
+            url: `https://www.amazon.com.br/s?k=${termoBuscaAmazon}&rh=${encodeURIComponent(refinamentos)}`,
             rotulo: 'Amazon'
         };
+
     }
 
     if (marketplaceNormalizado === 'shopee') {
