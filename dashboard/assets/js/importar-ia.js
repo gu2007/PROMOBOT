@@ -284,14 +284,21 @@ async function buscarProdutosPorTexto() {
 //  4) "_ITEM*CONDITION_2230284_" — só produtos NOVOS (nunca usados), já
 //     que é tudo que esse sistema cadastra.
 //
-// Pra Amazon, aplica a mesma ideia com os filtros oficiais e documentados
-// dela (via o parâmetro "rh", combinando refinamentos com vírgula):
+// Pra Amazon, os filtros são diferentes dos do ML em dois pontos
+// importantes, descobertos testando ao vivo:
 //
-//  1) Título entre aspas — mesma lógica de frase exata.
-//  2) "p_36:MINCENTAVOS-MAXCENTAVOS" — faixa de preço quase exata, em
-//     CENTAVOS (não reais — confirmado testando o filtro de preço real do
-//     site: R$80 a R$200 vira "8000-20000").
-//  3) "p_n_condition-type:13862762011" — só produtos NOVOS.
+//  1) SEM aspas no título — testamos com aspas (frase exata) e a busca da
+//     Amazon retornou ZERO resultados sempre que o título da IA tinha
+//     qualquer diferença de ordem/palavra em relação ao título real do
+//     anúncio (diferente do Mercado Livre, que tolerou bem frase exata).
+//     Sem aspas, a busca da Amazon já é naturalmente mais restritiva que a
+//     do ML, então não sobra ruído mesmo assim.
+//  2) "p_36:MINCENTAVOS-MAXCENTAVOS" com margem de 15% (não quase-exata)
+//     — uma faixa muito apertada (tipo R$1 de largura) fez o filtro de
+//     preço da Amazon não encontrar NADA, mesmo com o produto certo dentro
+//     da faixa. Com margem de 15% (mesmo padrão usado antes no ML) voltou
+//     a funcionar normalmente.
+//  3) "p_n_condition-type:13862762011" — só produtos NOVOS, igual ao ML.
 //
 // Cada filtro é opcional: se faltar preço, o filtro de preço simplesmente
 // não entra na URL — nunca quebra a busca.
@@ -306,14 +313,15 @@ function montarInfoBuscaMarketplace(marketplace, titulo, preco, precoAntigo) {
 
     if (marketplaceNormalizado === 'amazon') {
 
-        const termoBuscaAmazon = encodeURIComponent(`"${titulo}"`);
+        const termoBuscaAmazon = encodeURIComponent(titulo);
 
         let refinamentos = 'p_n_condition-type:13862762011';
 
         if (typeof preco === 'number' && preco > 0) {
 
-            const minCentavos = Math.floor(preco) * 100;
-            const maxCentavos = Math.ceil(preco) * 100;
+            const margem = 0.15;
+            const minCentavos = Math.max(0, Math.floor(preco * (1 - margem))) * 100;
+            const maxCentavos = Math.ceil(preco * (1 + margem)) * 100;
 
             refinamentos = `p_36:${minCentavos}-${maxCentavos},${refinamentos}`;
 
