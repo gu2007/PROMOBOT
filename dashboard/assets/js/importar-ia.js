@@ -267,9 +267,18 @@ async function buscarProdutosPorTexto() {
 }
 
 // ======================================
-// Monta a URL de busca mecânica (sem IA) certa pra cada marketplace
+// Monta a URL de busca mecânica (sem IA) certa pra cada marketplace.
+//
+// Pro Mercado Livre, além do título, agora também aplica um filtro de
+// faixa de preço na própria URL (recurso "escondido" de busca do ML:
+// "_PriceRange_MIN-MAX"), com margem de 15% pra cima e pra baixo do preço
+// que a IA já extraiu. Isso estreita a busca de "dezenas de produtos
+// parecidos" pra só os poucos que também batem no preço — sem precisar de
+// nenhuma automação de servidor (o Mercado Livre não tem como saber que
+// essa busca foi "sugerida" por um sistema; pra ele é só um link comum que
+// você abriu no seu próprio navegador).
 // ======================================
-function montarInfoBuscaMarketplace(marketplace, titulo) {
+function montarInfoBuscaMarketplace(marketplace, titulo, preco) {
 
     const termoBusca = encodeURIComponent(titulo);
 
@@ -294,8 +303,20 @@ function montarInfoBuscaMarketplace(marketplace, titulo) {
     }
 
     // Padrão: Mercado Livre (também usado se a IA não identificar o marketplace)
+    let filtroPreco = '';
+
+    if (typeof preco === 'number' && preco > 0) {
+
+        const margem = 0.15;
+        const precoMinimo = Math.max(0, Math.floor(preco * (1 - margem)));
+        const precoMaximo = Math.ceil(preco * (1 + margem));
+
+        filtroPreco = `_PriceRange_${precoMinimo}-${precoMaximo}`;
+
+    }
+
     return {
-        url: `https://lista.mercadolivre.com.br/${termoBusca}`,
+        url: `https://lista.mercadolivre.com.br/${termoBusca}${filtroPreco}`,
         rotulo: 'Mercado Livre'
     };
 
@@ -315,7 +336,7 @@ function renderizarResultados() {
         const div = document.createElement('div');
         div.className = 'cartaoResultadoImportacao';
 
-        const infoBusca = montarInfoBuscaMarketplace(produto.marketplace, produto.titulo);
+        const infoBusca = montarInfoBuscaMarketplace(produto.marketplace, produto.titulo, produto.preco);
 
         const precoHtml = produto.precoAntigo
             ? `<s style="color:var(--cor-texto-terciario); font-size:13px;">R$ ${produto.precoAntigo}</s> R$ ${produto.preco}`
