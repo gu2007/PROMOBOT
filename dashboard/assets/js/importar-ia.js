@@ -369,6 +369,59 @@ function montarInfoBuscaMarketplace(marketplace, titulo, preco, precoAntigo) {
 }
 
 // ======================================
+// Botão "Colar" nos campos de link — usa a área de transferência do
+// navegador (só funciona em HTTPS, que já está configurado). Preenche o
+// campo certo e dispara o ajuste de altura do campoExpandivel manualmente,
+// já que preencher .value por código não gera o evento de digitação normal
+// que o expandivel.js escuta.
+// ======================================
+async function colarDoClipboard(botao) {
+
+    const seletor = botao.dataset.alvo === 'original'
+        ? `.inputLinkOriginalProduto[data-indice="${botao.dataset.indice}"]`
+        : `.inputLinkProduto[data-indice="${botao.dataset.indice}"]`;
+
+    const campo = document.querySelector(seletor);
+
+    if (!campo) return;
+
+    if (!navigator.clipboard || !navigator.clipboard.readText) {
+        alert('Colar automático não é suportado nesse navegador. Toque e segure no campo pra colar manualmente.');
+        return;
+    }
+
+    try {
+
+        const texto = await navigator.clipboard.readText();
+
+        campo.value = texto;
+        ajustarAlturaTextarea(campo);
+
+    } catch (erro) {
+
+        console.error('Erro ao colar do clipboard:', erro);
+        alert('Não consegui acessar a área de transferência. Toque e segure no campo pra colar manualmente.');
+
+    }
+
+}
+
+function inicializarBotoesColar(escopo) {
+
+    const raiz = escopo || document;
+
+    raiz.querySelectorAll('.botaoColarClipboard').forEach(botao => {
+
+        if (!botao.dataset.colarPronto) {
+            botao.dataset.colarPronto = '1';
+            botao.addEventListener('click', () => colarDoClipboard(botao));
+        }
+
+    });
+
+}
+
+// ======================================
 // Renderização dos resultados (igual para as 3 formas)
 // ======================================
 function renderizarResultados() {
@@ -400,11 +453,17 @@ function renderizarResultados() {
                 <button type="button" class="botaoSecundario">Buscar produto no ${infoBusca.rotulo}</button>
             </a>
             <div class="campoFormulario" style="margin-top:12px;">
-                <label>Link de afiliado (pra enviar no WhatsApp)</label>
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                    <label>Link de afiliado (pra enviar no WhatsApp)</label>
+                    <button type="button" class="botaoColarClipboard" data-alvo="afiliado" data-indice="${indice}" style="white-space:nowrap; padding:4px 10px; font-size:13px;">📋 Colar</button>
+                </div>
                 <textarea class="inputLinkProduto campoExpandivel" rows="1" data-indice="${indice}" placeholder="https://..."></textarea>
             </div>
             <div class="campoFormulario">
-                <label>Link original da página do produto (sem afiliado — usado na verificação semanal de preço)</label>
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                    <label>Link original da página do produto (sem afiliado — usado na verificação semanal de preço)</label>
+                    <button type="button" class="botaoColarClipboard" data-alvo="original" data-indice="${indice}" style="white-space:nowrap; padding:4px 10px; font-size:13px;">📋 Colar</button>
+                </div>
                 <textarea class="inputLinkOriginalProduto campoExpandivel" rows="1" data-indice="${indice}" placeholder="https://..."></textarea>
             </div>
         `;
@@ -414,6 +473,7 @@ function renderizarResultados() {
     });
 
     inicializarCamposExpandiveis(resultados);
+    inicializarBotoesColar(resultados);
 
     if (produtosEncontrados.length > 0) {
 
