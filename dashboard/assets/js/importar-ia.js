@@ -269,7 +269,7 @@ async function buscarProdutosPorTexto() {
 // ======================================
 // Monta a URL de busca mecânica (sem IA) certa pra cada marketplace.
 //
-// Pro Mercado Livre, aplica 3 filtros "escondidos" de URL do próprio site,
+// Pro Mercado Livre, aplica 2 filtros "escondidos" de URL do próprio site,
 // combinados, pra estreitar a busca do jeito mais preciso possível — tudo
 // rodando no SEU navegador (sem automação de servidor, então sem risco
 // nenhum de bloqueio por bot):
@@ -277,12 +277,16 @@ async function buscarProdutosPorTexto() {
 //  1) Título entre aspas — trata como frase, não palavras soltas.
 //  2) "_PriceRange_MINBRL-MAXBRL" — faixa de preço quase exata (arredonda
 //     só os centavos pra cima/baixo), em vez de uma margem ampla.
-//  3) "_Discount_MIN-MAX" — faixa de desconto calculada a partir do preço
-//     antigo e do preço atual que a IA já extraiu, com margem de 3 pontos
-//     percentuais pra cima e pra baixo (cobre pequenas diferenças de
-//     arredondamento entre o que a IA leu e o que o ML mostra agora).
-//  4) "_ITEM*CONDITION_2230284_" — só produtos NOVOS (nunca usados), já
+//  3) "_ITEM*CONDITION_2230284_" — só produtos NOVOS (nunca usados), já
 //     que é tudo que esse sistema cadastra.
+//
+// O filtro de desconto ("_Discount_MIN-MAX") foi REMOVIDO depois de um
+// teste ao vivo mostrar que ele às vezes EXCLUI o produto certo da lista —
+// o cálculo de desconto que fazemos (a partir de preço e preço antigo que
+// a IA extraiu) nem sempre bate exatamente com o que o Mercado Livre
+// registra oficialmente pra aquele item, e quando não bate, o filtro
+// derruba o produto certo em vez de ajudar. Sem ele, título + preço já
+// reduz bem os candidatos, sem esse risco de "produto inexistente" falso.
 //
 // Pra Amazon, os filtros são diferentes dos do ML em dois pontos
 // importantes, descobertos testando ao vivo:
@@ -352,16 +356,6 @@ function montarInfoBuscaMarketplace(marketplace, titulo, preco, precoAntigo) {
         const precoMaximo = Math.ceil(preco);
 
         filtros += `_PriceRange_${precoMinimo}BRL-${precoMaximo}BRL`;
-
-    }
-
-    if (typeof preco === 'number' && typeof precoAntigo === 'number' && precoAntigo > preco) {
-
-        const desconto = Math.round(((precoAntigo - preco) / precoAntigo) * 100);
-        const descontoMinimo = Math.max(0, desconto - 3);
-        const descontoMaximo = desconto + 3;
-
-        filtros += `_Discount_${descontoMinimo}-${descontoMaximo}`;
 
     }
 
