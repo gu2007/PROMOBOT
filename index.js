@@ -63,7 +63,7 @@ function formatarMensagem(produto) {
 async function enviarProduto(client, produto) {
 
   console.log(produto);
-  
+
   const texto = formatarMensagem(produto);
 
   if (produto.imagem) {
@@ -89,8 +89,7 @@ const client = new Client({
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
   },
   webVersionCache: {
-    type: 'remote',
-    remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1031490220-alpha.html',
+    type: 'local', // usa a versão que autenticou com sucesso; se não tiver cache, busca a mais recente do próprio WhatsApp
   },
 });
 
