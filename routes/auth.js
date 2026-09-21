@@ -14,9 +14,6 @@ function salvarUsuarios(usuarios) {
     fs.writeFileSync(USUARIOS_PATH, JSON.stringify(usuarios, null, 2), 'utf8');
 }
 
-// ======================================
-// LOGIN
-// ======================================
 router.post('/login', (req, res) => {
 
     const { usuario, senha } = req.body;
@@ -41,18 +38,12 @@ router.post('/login', (req, res) => {
 
 });
 
-// ======================================
-// LOGOUT
-// ======================================
 router.post('/logout', (req, res) => {
     req.session.destroy(() => {
         res.json({ sucesso: true });
     });
 });
 
-// ======================================
-// VERIFICAR SESSÃO ATUAL
-// ======================================
 router.get('/sessao', (req, res) => {
     res.json({
         autenticado: !!(req.session && req.session.autenticado),
@@ -60,9 +51,7 @@ router.get('/sessao', (req, res) => {
     });
 });
 
-// ======================================
-// CADASTRAR NOVO USUÁRIO (só quem já está logado)
-// ======================================
+// Cadastro de novo usuário — só quem já está logado pode fazer isso.
 router.post('/usuarios', (req, res) => {
 
     if (!req.session || !req.session.autenticado) {
