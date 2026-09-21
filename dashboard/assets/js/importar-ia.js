@@ -1,8 +1,6 @@
-﻿let produtosEncontrados = [];
+let produtosEncontrados = [];
 
-// ======================================
 // Controle das abas (Link / Arquivo / Texto)
-// ======================================
 function mudarAba(aba) {
 
     document.getElementById('abaLink').style.display = aba === 'link' ? 'block' : 'none';
@@ -15,11 +13,9 @@ function mudarAba(aba) {
 
 }
 
-// ======================================
 // Funções do log de atividade visual (substituem o antigo terminal preto):
 // linhas de status coloridas por tipo, bloco recolhível com o prompt
 // enviado à IA, e um bloco separado acumulando a resposta em streaming.
-// ======================================
 let elementoRespostaAtual = null;
 
 function adicionarLinhaLog(texto, tipo) {
@@ -56,10 +52,8 @@ function adicionarTrechoResposta(texto) {
     areaStreaming.scrollTop = areaStreaming.scrollHeight;
 }
 
-// ======================================
-// Função genérica que processa a transmissão (SSE) vinda do servidor,
-// usada pelas 3 formas de busca (link, arquivo, texto)
-// ======================================
+// Processa a transmissão (SSE) vinda do servidor, usada pelas 3 formas de
+// busca (link, arquivo, texto).
 async function processarStream(resposta) {
 
     const mensagemStatus = document.getElementById('mensagemStatus');
@@ -144,9 +138,7 @@ function prepararTelaParaBusca() {
 
 }
 
-// ======================================
-// FORMA 1 — Buscar produtos por LINK
-// ======================================
+// Forma 1 — buscar produtos por link
 async function buscarProdutosPorLink() {
 
     const link = document.getElementById('linkPagina').value.trim();
@@ -184,9 +176,7 @@ async function buscarProdutosPorLink() {
 
 }
 
-// ======================================
-// FORMA 2 — Buscar produtos por ARQUIVO (PDF ou Word)
-// ======================================
+// Forma 2 — buscar produtos por arquivo (PDF ou Word)
 async function buscarProdutosPorArquivo() {
 
     const inputArquivo = document.getElementById('arquivoProdutos');
@@ -226,9 +216,7 @@ async function buscarProdutosPorArquivo() {
 
 }
 
-// ======================================
-// FORMA 3 — Buscar produtos por TEXTO colado
-// ======================================
+// Forma 3 — buscar produtos por texto colado
 async function buscarProdutosPorTexto() {
 
     const texto = document.getElementById('textoProdutos').value.trim();
@@ -266,47 +254,22 @@ async function buscarProdutosPorTexto() {
 
 }
 
-// ======================================
 // Monta a URL de busca mecânica (sem IA) certa pra cada marketplace.
 //
-// Pro Mercado Livre, aplica 2 filtros "escondidos" de URL do próprio site,
-// combinados, pra estreitar a busca do jeito mais preciso possível — tudo
-// rodando no SEU navegador (sem automação de servidor, então sem risco
-// nenhum de bloqueio por bot):
+// Pro Mercado Livre: título entre aspas (frase exata), faixa de preço quase
+// exata e filtro de "só produtos novos" — tudo rodando no navegador do
+// usuário, sem automação de servidor. O filtro de desconto foi removido
+// depois de testes mostrarem que ele às vezes excluía o produto certo,
+// porque o desconto calculado por aqui nem sempre bate exatamente com o
+// que o Mercado Livre registra.
 //
-//  1) Título entre aspas — trata como frase, não palavras soltas.
-//  2) "_PriceRange_MINBRL-MAXBRL" — faixa de preço quase exata (arredonda
-//     só os centavos pra cima/baixo), em vez de uma margem ampla.
-//  3) "_ITEM*CONDITION_2230284_" — só produtos NOVOS (nunca usados), já
-//     que é tudo que esse sistema cadastra.
+// Pra Amazon: sem aspas no título (com aspas a busca retornava zero
+// resultados sempre que havia qualquer diferença de ordem/palavra),
+// margem de preço mais larga (15%, uma faixa apertada não encontrava
+// nada) e o mesmo filtro de "só produtos novos".
 //
-// O filtro de desconto ("_Discount_MIN-MAX") foi REMOVIDO depois de um
-// teste ao vivo mostrar que ele às vezes EXCLUI o produto certo da lista —
-// o cálculo de desconto que fazemos (a partir de preço e preço antigo que
-// a IA extraiu) nem sempre bate exatamente com o que o Mercado Livre
-// registra oficialmente pra aquele item, e quando não bate, o filtro
-// derruba o produto certo em vez de ajudar. Sem ele, título + preço já
-// reduz bem os candidatos, sem esse risco de "produto inexistente" falso.
-//
-// Pra Amazon, os filtros são diferentes dos do ML em dois pontos
-// importantes, descobertos testando ao vivo:
-//
-//  1) SEM aspas no título — testamos com aspas (frase exata) e a busca da
-//     Amazon retornou ZERO resultados sempre que o título da IA tinha
-//     qualquer diferença de ordem/palavra em relação ao título real do
-//     anúncio (diferente do Mercado Livre, que tolerou bem frase exata).
-//     Sem aspas, a busca da Amazon já é naturalmente mais restritiva que a
-//     do ML, então não sobra ruído mesmo assim.
-//  2) "p_36:MINCENTAVOS-MAXCENTAVOS" com margem de 15% (não quase-exata)
-//     — uma faixa muito apertada (tipo R$1 de largura) fez o filtro de
-//     preço da Amazon não encontrar NADA, mesmo com o produto certo dentro
-//     da faixa. Com margem de 15% (mesmo padrão usado antes no ML) voltou
-//     a funcionar normalmente.
-//  3) "p_n_condition-type:13862762011" — só produtos NOVOS, igual ao ML.
-//
-// Cada filtro é opcional: se faltar preço, o filtro de preço simplesmente
-// não entra na URL — nunca quebra a busca.
-// ======================================
+// Cada filtro é opcional: se faltar preço, ele simplesmente não entra na
+// URL — nunca quebra a busca.
 function montarInfoBuscaMarketplace(marketplace, titulo, preco, precoAntigo) {
 
     const marketplaceNormalizado = (marketplace || '')
@@ -368,13 +331,11 @@ function montarInfoBuscaMarketplace(marketplace, titulo, preco, precoAntigo) {
 
 }
 
-// ======================================
 // Botão "Colar" nos campos de link — usa a área de transferência do
 // navegador (só funciona em HTTPS, que já está configurado). Preenche o
 // campo certo e dispara o ajuste de altura do campoExpandivel manualmente,
 // já que preencher .value por código não gera o evento de digitação normal
 // que o expandivel.js escuta.
-// ======================================
 async function colarDoClipboard(botao) {
 
     const seletor = botao.dataset.alvo === 'original'
@@ -421,9 +382,7 @@ function inicializarBotoesColar(escopo) {
 
 }
 
-// ======================================
 // Renderização dos resultados (igual para as 3 formas)
-// ======================================
 function renderizarResultados() {
 
     const resultados = document.getElementById('resultados');
@@ -455,14 +414,14 @@ function renderizarResultados() {
             <div class="campoFormulario" style="margin-top:12px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
                     <label>Link de afiliado (pra enviar no WhatsApp)</label>
-                    <button type="button" class="botaoColarClipboard" data-alvo="afiliado" data-indice="${indice}" style="white-space:nowrap; padding:4px 10px; font-size:13px;">📋 Colar</button>
+                    <button type="button" class="botaoColarClipboard" data-alvo="afiliado" data-indice="${indice}" style="white-space:nowrap; padding:4px 10px; font-size:13px;">Colar</button>
                 </div>
                 <textarea class="inputLinkProduto campoExpandivel" rows="1" data-indice="${indice}" placeholder="https://..."></textarea>
             </div>
             <div class="campoFormulario">
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
                     <label>Link original da página do produto (sem afiliado — usado na verificação semanal de preço)</label>
-                    <button type="button" class="botaoColarClipboard" data-alvo="original" data-indice="${indice}" style="white-space:nowrap; padding:4px 10px; font-size:13px;">📋 Colar</button>
+                    <button type="button" class="botaoColarClipboard" data-alvo="original" data-indice="${indice}" style="white-space:nowrap; padding:4px 10px; font-size:13px;">Colar</button>
                 </div>
                 <textarea class="inputLinkOriginalProduto campoExpandivel" rows="1" data-indice="${indice}" placeholder="https://..."></textarea>
             </div>
@@ -489,12 +448,10 @@ function renderizarResultados() {
 
 }
 
-// ======================================
 // Salvar os produtos selecionados (igual para as 3 formas). Se o link de
-// afiliado já foi preenchido, o produto entra ATIVO direto na lista — não
-// precisa de segurança extra, já que sem link ele nem seria divulgado
-// mesmo. Se o link ficou em branco, entra inativo, do jeito de sempre.
-// ======================================
+// afiliado já foi preenchido, o produto entra ativo direto na lista — sem
+// link ele nem seria divulgado mesmo. Se o link ficou em branco, entra
+// inativo, do jeito de sempre.
 async function salvarSelecionados() {
 
     const checkboxes = document.querySelectorAll('.checkboxProduto:checked');
