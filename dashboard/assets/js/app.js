@@ -1,4 +1,4 @@
-﻿async function carregarDashboard() {
+async function carregarDashboard() {
 
     try {
 
@@ -71,11 +71,9 @@ async function alterarStatusSistema() {
 
 }
 
-// ======================================
-// Gráfico "Produtos por marketplace" — conta quantos produtos existem em
-// cada marketplace (Mercado Livre, Amazon, Shopee), normalizando o nome
-// pra agrupar variações de maiúscula/espaço no mesmo grupo.
-// ======================================
+// Conta quantos produtos existem em cada marketplace (Mercado Livre, Amazon,
+// Shopee) pro gráfico, normalizando o nome pra agrupar variações de
+// maiúscula/espaço no mesmo grupo.
 function normalizarNomeMarketplace(nome) {
 
     return (nome || "")
