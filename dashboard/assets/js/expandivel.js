@@ -1,7 +1,5 @@
-﻿// ======================================
 // Faz uma caixinha de texto (textarea) crescer sozinha conforme o conteúdo,
 // em vez de rolar por dentro de uma caixa pequena e fixa.
-// ======================================
 function ajustarAlturaTextarea(campo) {
 
     campo.style.height = "auto";
@@ -9,7 +7,6 @@ function ajustarAlturaTextarea(campo) {
 
 }
 
-// ======================================
 // Ativa esse comportamento em todo campo com a classe "campoExpandivel"
 // dentro de um escopo (documento inteiro por padrão, ou um container
 // específico — útil pra campos criados dinamicamente depois, como os
@@ -19,7 +16,6 @@ function ajustarAlturaTextarea(campo) {
 // vez por campo (controlado pelo atributo data-expandivel-pronto), mas o
 // ajuste de altura sempre roda de novo — útil depois de carregar um valor
 // programaticamente (ex: abrir Editar Produto) ou limpar um campo.
-// ======================================
 function inicializarCamposExpandiveis(escopo) {
 
     const raiz = escopo || document;
