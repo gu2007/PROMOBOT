@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
@@ -7,16 +7,10 @@ const mammoth = require('mammoth');
 const { GoogleGenAI } = require('@google/genai');
 const { encontrarProdutoMercadoLivre } = require('../resolvedorAfiliado');
 
-const CONFIG_PATH = path.join(__dirname, '..', 'config.json');
-
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 15 * 1024 * 1024 } // limite de 15MB por arquivo
 });
-
-function carregarConfig() {
-    return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-}
 
 // ======================================
 // Manda um evento no formato SSE (Server-Sent Events) para o navegador
@@ -88,7 +82,7 @@ function processarRespostaIA(textoResposta) {
 }
 
 // ======================================
-// NOVO: depois que a IA extrai os produtos, tenta achar sozinho o link real
+// Depois que a IA extrai os produtos, tenta achar sozinho o link real
 // de cada produto do Mercado Livre (busca pública + comparação de título e
 // preço — sem depender da API de afiliados nem da API de busca do ML).
 //
@@ -157,7 +151,7 @@ async function chamarGeminiComStreamETentativas(ai, params, res) {
 
             try {
 
-                console.log(`🤖 Chamando ${modelo} em streaming (tentativa ${tentativa}/3)...`);
+                console.log(`Chamando ${modelo} em streaming (tentativa ${tentativa}/3)...`);
                 enviarEvento(res, 'status', { mensagem: `Consultando ${modelo}...` });
 
                 const streamResponse = await ai.models.generateContentStream({
@@ -230,11 +224,11 @@ function prepararRespostaStream(res) {
 }
 
 function obterChaveGemini() {
-    const config = carregarConfig();
-    if (!config.gemini || !config.gemini.apiKey) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
         throw new Error('Chave da API do Gemini não configurada.');
     }
-    return config.gemini.apiKey;
+    return apiKey;
 }
 
 // ======================================
@@ -340,7 +334,6 @@ router.post('/extrair-arquivo', upload.single('arquivo'), async (req, res) => {
 
         if (ehWord) {
 
-            // Word: convertemos para texto simples primeiro (o Gemini não lê .docx diretamente)
             enviarEvento(res, 'status', { mensagem: 'Lendo o arquivo Word...' });
 
             const resultado = await mammoth.extractRawText({ buffer: req.file.buffer });
@@ -354,7 +347,6 @@ router.post('/extrair-arquivo', upload.single('arquivo'), async (req, res) => {
 
         } else {
 
-            // PDF: o Gemini lê o arquivo diretamente, sem precisarmos converter nada
             enviarEvento(res, 'status', { mensagem: 'Lendo o arquivo PDF...' });
 
             const base64Pdf = req.file.buffer.toString('base64');
