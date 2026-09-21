@@ -1,13 +1,10 @@
-﻿const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer');
 const { calcularSimilaridadeTitulos, precosSaoProximos } = require('./produtos');
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-// ======================================
-// Mantém UM navegador aberto e reaproveitado entre resoluções (só é aberto
-// na primeira vez que for realmente necessário), em vez de abrir e fechar
-// um processo do Chromium inteiro a cada produto — mais leve pro servidor.
-// ======================================
+// Mantém um navegador aberto e reaproveitado entre resoluções, em vez de
+// abrir e fechar o Chromium inteiro a cada produto.
 let promessaDoNavegador = null;
 
 function obterNavegador() {
@@ -18,8 +15,6 @@ function obterNavegador() {
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
-                // Ajuda a esconder alguns sinais óbvios de automação que
-                // sites de e-commerce costumam checar pra bloquear bots.
                 '--disable-blink-features=AutomationControlled'
             ]
         });
@@ -29,29 +24,19 @@ function obterNavegador() {
 
 }
 
-// ======================================
-// Fila simples: garante que só UMA resolução roda por vez (Mercado Livre ou
-// Amazon, tanto faz), mesmo que várias sejam disparadas quase juntas (ex:
-// importação de vários produtos de uma vez). Evita sobrecarregar o servidor
-// com várias abas ao mesmo tempo.
-// ======================================
+// Garante que só uma resolução roda por vez, mesmo que várias sejam
+// disparadas quase juntas (ex: importação de vários produtos de uma vez).
 let filaAtual = Promise.resolve();
 
 function enfileirar(tarefa) {
 
     const proxima = filaAtual.then(tarefa, tarefa);
-
-    // Nunca deixa um erro de uma tarefa quebrar a fila pras próximas
     filaAtual = proxima.catch(() => {});
 
     return proxima;
 
 }
 
-// ======================================
-// Verifica de qual marketplace é um link de afiliado (ou se é de nenhum dos
-// que sabemos resolver automaticamente, por enquanto).
-// ======================================
 function ehLinkMercadoLivre(link) {
     return typeof link === 'string' && link.includes('meli.la');
 }
@@ -64,32 +49,14 @@ function ehLinkConhecido(link) {
     return ehLinkMercadoLivre(link) || ehLinkAmazon(link);
 }
 
-// ======================================
-// MERCADO LIVRE: abre o link de afiliado num navegador de verdade
-// (headless), segue os redirecionamentos automáticos até a página "de
-// perfil" do Mercado Livre, e dentro dela encontra o link do produto real.
-//
-// Três estratégias, em ordem de preferência:
-//
-// 1) O link marcado como "card-featured" — mais rápida, mas nem sempre
-//    está presente (a página muda de layout com frequência).
-//
-// 2) Clicar de verdade no botão "Ir para produto" (a mesma ação que você
-//    faria manualmente). Como é um navegador automatizado, o Mercado Livre
-//    às vezes insere um portão extra de verificação de conta no meio do
-//    caminho — mas esse portão já vem com o link de destino real escondido
-//    dentro dele (no parâmetro "go="), então extraímos ele de lá, sem
-//    precisar "passar" pelo portão de verdade.
-//
-// 3) Reserva final: compara o TÍTULO real do produto com os links de
-//    produto disponíveis na página, e escolhe o que tem mais palavras em
-//    comum — só aceita se pelo menos 2 palavras baterem, pra não arriscar
-//    "chutar" um produto errado por coincidência.
-//
-// A imagem (og:image) é capturada logo no início, antes de qualquer clique
-// que possa navegar pra outra página — ela já se mostrou confiável em
-// todos os testes até agora.
-// ======================================
+// Abre o link de afiliado do Mercado Livre num navegador real e segue os
+// redirecionamentos até achar o link do produto de verdade. Três
+// estratégias, em ordem de preferência: o link "card-featured" quando
+// presente; clicar em "Ir para produto" (o Mercado Livre às vezes insere
+// um portão de verificação de conta no meio do caminho, mas o destino real
+// já vem escondido no parâmetro "go=" desse portão, então extraímos ele de
+// lá em vez de tentar passar pelo portão); e, por último, comparar o
+// título do produto com os links disponíveis na página.
 async function resolverLinkMercadoLivre(linkAfiliado, tituloEsperado) {
 
     return enfileirar(async () => {
@@ -106,9 +73,8 @@ async function resolverLinkMercadoLivre(linkAfiliado, tituloEsperado) {
                 timeout: 20000
             });
 
-            console.log(`🔬 [diagnóstico ML] "${linkAfiliado}" -> chegou em: ${pagina.url()}`);
+            console.log(`[ML] "${linkAfiliado}" -> chegou em: ${pagina.url()}`);
 
-            // Captura a imagem e tenta a estratégia 1 (card-featured) logo de cara
             const primeiraTentativa = await pagina.evaluate(() => {
 
                 const links = Array.from(document.querySelectorAll('a[href]'));
@@ -130,7 +96,6 @@ async function resolverLinkMercadoLivre(linkAfiliado, tituloEsperado) {
             const imagem = primeiraTentativa.imagem;
             let estrategiaUsada = linkOriginal ? 'card-featured' : null;
 
-            // Estratégia 2: clicar de verdade no botão "Ir para produto"
             if (!linkOriginal) {
 
                 const urlAntesDoClique = pagina.url();
@@ -173,11 +138,9 @@ async function resolverLinkMercadoLivre(linkAfiliado, tituloEsperado) {
 
                         }
 
-                        console.log(`🔬 [diagnóstico ML] depois do clique em "Ir para produto", chegou em: ${urlDepoisDoClique}`);
-
                     } catch (erroClique) {
 
-                        console.log(`🔬 [diagnóstico ML] não conseguiu clicar em "Ir para produto": ${erroClique.message}`);
+                        console.log(`[ML] não conseguiu clicar em "Ir para produto": ${erroClique.message}`);
 
                     }
 
@@ -185,7 +148,8 @@ async function resolverLinkMercadoLivre(linkAfiliado, tituloEsperado) {
 
             }
 
-            // Estratégia 3: comparação por título (só roda se as duas anteriores falharam)
+            // Última tentativa: compara o título esperado com os links de
+            // produto da página, só aceita se pelo menos 2 palavras baterem.
             if (!linkOriginal && tituloEsperado) {
 
                 linkOriginal = await pagina.evaluate((tituloEsperado) => {
@@ -194,7 +158,7 @@ async function resolverLinkMercadoLivre(linkAfiliado, tituloEsperado) {
                         return (texto || '')
                             .toString()
                             .normalize('NFD')
-                            .replace(/[\u0300-\u036f]/g, '')
+                            .replace(/[̀-ͯ]/g, '')
                             .toLowerCase()
                             .replace(/[^a-z0-9\s-]/g, ' ')
                             .replace(/[\s-]+/g, ' ')
@@ -239,15 +203,11 @@ async function resolverLinkMercadoLivre(linkAfiliado, tituloEsperado) {
 
             }
 
-            const resultado = { linkOriginal, imagem, estrategiaUsada };
-
-            console.log(`🔬 [diagnóstico ML] resultado:`, JSON.stringify(resultado));
-
-            return resultado;
+            return { linkOriginal, imagem, estrategiaUsada };
 
         } catch (erro) {
 
-            console.log(`🔬 [diagnóstico ML] ERRO em "${linkAfiliado}": ${erro.message}`);
+            console.log(`[ML] erro em "${linkAfiliado}": ${erro.message}`);
             throw erro;
 
         } finally {
@@ -260,26 +220,12 @@ async function resolverLinkMercadoLivre(linkAfiliado, tituloEsperado) {
 
 }
 
-// ======================================
-// AMAZON: em duas etapas.
-//
-// 1) Usa o navegador de verdade só pra seguir o redirecionamento do link
-//    de afiliado até a página real do produto. Usa "domcontentloaded" (não
-//    "networkidle2") porque a Amazon nunca "sossega" de verdade a rede —
-//    ela fica com pedidos de segundo plano acontecendo sempre, o que fazia
-//    a gente esperar até estourar o tempo à toa. domcontentloaded já é
-//    suficiente pra pegar o endereço final depois do redirecionamento.
-//
-// 2) Com esse endereço limpo em mãos, faz um pedido simples (sem precisar
-//    de navegador) direto nele — isso NÃO cai no bloqueio de "Continuar
-//    comprando" que aparece na navegação normal, e o conteúdo real da
-//    página vem completo. De lá, procura a foto principal do produto nos
-//    dados estruturados que a própria Amazon guarda na página
-//    (data-a-dynamic-image, um mapa de "foto -> tamanho"), escolhendo a
-//    maior versão disponível. Se por algum motivo esses dados não
-//    estiverem lá, tenta como reserva o padrão de nome de arquivo mais
-//    comum da foto grande oficial.
-// ======================================
+// Amazon: primeiro segue o redirecionamento do link de afiliado num
+// navegador real até a página do produto (domcontentloaded, porque a
+// Amazon nunca "sossega" a rede de verdade). Depois busca essa URL direto
+// com fetch, que não cai no bloqueio de "Continuar comprando" que aparece
+// na navegação normal, e extrai a imagem principal dos dados estruturados
+// que a Amazon guarda na página (data-a-dynamic-image).
 async function resolverLinkAmazon(linkAfiliado) {
 
     return enfileirar(async () => {
@@ -300,11 +246,11 @@ async function resolverLinkAmazon(linkAfiliado) {
 
             linkOriginal = pagina.url().split('?')[0];
 
-            console.log(`🔬 [diagnóstico Amazon] "${linkAfiliado}" -> chegou em: ${linkOriginal}`);
+            console.log(`[Amazon] "${linkAfiliado}" -> chegou em: ${linkOriginal}`);
 
         } catch (erro) {
 
-            console.log(`🔬 [diagnóstico Amazon] ERRO ao resolver o link "${linkAfiliado}": ${erro.message}`);
+            console.log(`[Amazon] erro ao resolver o link "${linkAfiliado}": ${erro.message}`);
             throw erro;
 
         } finally {
@@ -323,15 +269,8 @@ async function resolverLinkAmazon(linkAfiliado) {
                     headers: { 'User-Agent': USER_AGENT }
                 });
 
-                console.log(`🔬 [diagnóstico Amazon] status do fetch da página final: ${resposta.status}`);
-
                 const html = await resposta.text();
 
-                console.log(`🔬 [diagnóstico Amazon] tamanho da página: ${html.length} caracteres`);
-
-                // Estratégia 1 (preferida): os dados estruturados que a
-                // Amazon guarda na página, com todas as versões de tamanho
-                // da foto principal — pega a maior disponível.
                 const matchDynamic = html.match(/data-a-dynamic-image="([^"]+)"/);
 
                 if (matchDynamic) {
@@ -356,14 +295,13 @@ async function resolverLinkAmazon(linkAfiliado) {
 
                     } catch (erroJson) {
 
-                        console.log(`🔬 [diagnóstico Amazon] data-a-dynamic-image encontrado mas não deu pra interpretar: ${erroJson.message}`);
+                        console.log(`[Amazon] data-a-dynamic-image não deu pra interpretar: ${erroJson.message}`);
 
                     }
 
                 }
 
-                // Estratégia 2 (reserva): padrão de nome de arquivo da foto
-                // grande oficial, usado se a estratégia 1 não funcionar.
+                // Reserva: padrão de nome de arquivo da foto grande oficial.
                 if (!imagem) {
 
                     const correspondencia = html.match(
@@ -374,14 +312,9 @@ async function resolverLinkAmazon(linkAfiliado) {
 
                 }
 
-                console.log(`🔬 [diagnóstico Amazon] imagem encontrada: ${imagem || 'NÃO ENCONTRADA'}`);
-
             } catch (erro) {
 
-                console.log(`🔬 [diagnóstico Amazon] ERRO ao buscar a imagem em "${linkOriginal}": ${erro.message}`);
-
-                // Se essa parte falhar, não tem problema — pelo menos o
-                // link original já foi resolvido com sucesso.
+                console.log(`[Amazon] erro ao buscar a imagem em "${linkOriginal}": ${erro.message}`);
 
             }
 
@@ -393,11 +326,6 @@ async function resolverLinkAmazon(linkAfiliado) {
 
 }
 
-// ======================================
-// Escolhe automaticamente o resolvedor certo, de acordo com o marketplace
-// do link recebido. O título esperado só é usado pelo Mercado Livre (ajuda
-// a identificar o produto certo quando o marcador principal não existe).
-// ======================================
 async function resolverLinkAfiliado(linkAfiliado, tituloEsperado) {
 
     if (ehLinkMercadoLivre(linkAfiliado)) {
@@ -412,45 +340,15 @@ async function resolverLinkAfiliado(linkAfiliado, tituloEsperado) {
 
 }
 
-// ==========================================================================
-// NOVO: busca automática de produto no Mercado Livre por título + preço
-// ==========================================================================
-//
-// Objetivo: dado um produto que a IA já extraiu (título, preço, preço
-// antigo), achar sozinho o link real do produto no Mercado Livre — sem
-// depender da API de busca (que hoje está retornando 403 pra muita gente,
-// mesmo autenticada) e sem você precisar garimpar manualmente.
-//
-// Como funciona:
-//  1) Abre a página pública de busca do ML com o título do produto
-//     (mesmo navegador/fila do resto do resolvedor).
-//  2) Extrai candidatos da página renderizada (título, preço, preço antigo,
-//     link, imagem) — usando o padrão de URL de produto (/MLB-\d+/ ou
-//     /p/MLB\d+/) em vez de nomes de classe CSS, porque o Mercado Livre
-//     muda os nomes de classe com frequência mas o padrão de URL do
-//     produto é estável.
-//  3) Compara cada candidato com o produto da IA usando as MESMAS funções
-//     de similaridade de título e proximidade de preço que o sistema já
-//     usa pra detectar duplicata (calcularSimilaridadeTitulos,
-//     precosSaoProximos) — reaproveitando lógica já validada, em vez de
-//     inventar um critério novo do zero.
-//  4) Decide:
-//     - Se o melhor candidato bate os dois critérios (similaridade >= 0.6
-//       E preço a até 15% de diferença): match CONFIANTE, preenche sozinho.
-//     - Senão: devolve os 3 melhores candidatos por similaridade, pra você
-//       escolher manualmente (muito mais rápido que garimpar a busca
-//       inteira).
-//     - Se a busca não achar nenhum candidato: relata "não encontrado".
-// ==========================================================================
-
+// Busca automática de produto no Mercado Livre por título + preço, sem
+// depender da API de busca (que retorna 403 mesmo autenticada) e sem
+// garimpar manualmente. Abre a busca pública, extrai candidatos da página
+// e compara com o produto que a IA já extraiu (título + preço) usando as
+// mesmas funções de similaridade que o sistema já usa pra detectar
+// duplicata. Se o melhor candidato bater os dois critérios, preenche
+// sozinho; senão devolve até 3 candidatos pra escolha manual.
 const SIMILARIDADE_MINIMA_MATCH_CONFIANTE = 0.6;
 
-// ======================================
-// Abre a página de busca pública do ML e extrai os candidatos visíveis.
-// Retorna um array (pode vir vazio se a busca não achar nada, ou se a
-// extração falhar por mudança de layout — nesse caso NUNCA lança erro pra
-// não quebrar a importação inteira, só loga o diagnóstico e devolve []).
-// ======================================
 async function buscarProdutosMercadoLivre(termoBusca) {
 
     return enfileirar(async () => {
@@ -462,16 +360,9 @@ async function buscarProdutosMercadoLivre(termoBusca) {
 
             await pagina.setUserAgent(USER_AGENT);
 
-            // Tentativa de disfarçar sinais comuns de automação, já que o
-            // ML está mandando essa busca pro portão de verificação de
-            // conta em 100% das tentativas (bloqueio por detecção de bot):
-            // - navigator.webdriver: sinalizador que o Chrome headless
-            //   deixa ligado por padrão, e que sites costumam checar.
-            // - viewport: o headless usa por padrão uma janela pequena e
-            //   atípica de usuário real (800x600); usamos um tamanho comum
-            //   de desktop.
-            // - Accept-Language: declara português, já que o site inteiro
-            //   é em pt-BR.
+            // O Mercado Livre manda essa busca pro portão de verificação de
+            // conta com bastante frequência; as linhas abaixo tentam
+            // disfarçar os sinais mais óbvios de automação.
             await pagina.evaluateOnNewDocument(() => {
                 Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
             });
@@ -485,14 +376,9 @@ async function buscarProdutosMercadoLivre(termoBusca) {
                 timeout: 20000
             });
 
-            console.log(`🔬 [diagnóstico busca ML] "${termoBusca}" -> chegou em: ${pagina.url()}`);
-
-            // O mesmo portão de verificação de conta que o resolverLinkMercadoLivre
-            // já contorna ao resolver link de afiliado também aparece aqui, ao abrir
-            // a busca direto. Em vez de tentar "passar" por ele, extraímos o destino
-            // real escondido no parâmetro "go=" e navegamos direto pra lá — sem isso,
-            // a extração de candidatos sempre roda em cima da página do portão (que
-            // não tem nenhum produto) e retorna 0 candidatos.
+            // O mesmo portão de verificação de conta aparece aqui também.
+            // Em vez de tentar passar por ele, extraímos o destino real do
+            // parâmetro "go=" e navegamos direto pra lá.
             if (pagina.url().includes('account-verification')) {
 
                 const urlObj = new URL(pagina.url());
@@ -500,14 +386,10 @@ async function buscarProdutosMercadoLivre(termoBusca) {
 
                 if (destino) {
 
-                    console.log(`🔬 [diagnóstico busca ML] caiu no portão de verificação, indo direto pro destino real: ${destino}`);
-
                     await pagina.goto(destino, {
                         waitUntil: 'networkidle2',
                         timeout: 20000
                     });
-
-                    console.log(`🔬 [diagnóstico busca ML] depois do redirecionamento, chegou em: ${pagina.url()}`);
 
                 }
 
@@ -515,42 +397,31 @@ async function buscarProdutosMercadoLivre(termoBusca) {
 
             const candidatos = await pagina.evaluate(() => {
 
-                // Produto real no ML sempre tem um ID no padrão MLB seguido
-                // de dígitos, seja como "/MLB-1234567890-titulo" ou
-                // "/p/MLB12345678" (produto de catálogo). Esse padrão é bem
-                // mais estável do que nomes de classe CSS, que o Mercado
-                // Livre reformula com frequência.
+                // Produto real do ML sempre tem um ID no padrão MLB seguido
+                // de dígitos — mais estável que nomes de classe CSS, que o
+                // Mercado Livre reformula com frequência.
                 const padraoProduto = /MLB-?\d{8,}/;
 
                 const ancoras = Array.from(document.querySelectorAll('a[href]'))
                     .filter(a => padraoProduto.test(a.href));
 
-                // Evita processar a mesma "carta" de produto duas vezes,
-                // caso tenha mais de um link apontando pra ela (ex: link na
-                // foto E link no título).
                 const containersJaVistos = new Set();
                 const resultado = [];
 
                 ancoras.forEach(a => {
 
-                    // Sobe até achar um container razoável da "carta" do
-                    // produto (onde título, preço e imagem moram juntos).
                     let container = a.closest('li') || a.closest('article') || a.parentElement;
 
                     if (!container || containersJaVistos.has(container)) return;
                     containersJaVistos.add(container);
 
-                    // Título: o alt da imagem principal costuma ser o nome
-                    // completo e "limpo" do produto, mais confiável do que
-                    // tentar montar o título a partir de texto solto.
+                    // O alt da imagem principal costuma ser o título completo
+                    // e mais confiável do que montar a partir de texto solto.
                     const imagemEl = container.querySelector('img');
                     const titulo = (imagemEl && (imagemEl.alt || '')).trim() || (a.innerText || '').trim();
 
                     if (!titulo) return;
 
-                    // Preço: pega todos os trechos "R$ 1.234,56" no texto do
-                    // container. O preço RISCADO (antigo) normalmente fica
-                    // dentro de uma tag <s>; o preço atual é o que sobra.
                     function extrairNumero(texto) {
                         const limpo = texto.replace(/[^\d,]/g, '').replace(',', '.');
                         const numero = parseFloat(limpo);
@@ -562,10 +433,8 @@ async function buscarProdutosMercadoLivre(termoBusca) {
                         ? extrairNumero(elementoPrecoAntigo.innerText || '')
                         : null;
 
-                    // Remove qualquer menção de parcelamento ("12x R$ 20,82"
-                    // etc.) ANTES de procurar preços — senão o valor da
-                    // parcela (sempre o menor "R$" do texto) seria
-                    // confundido com o preço à vista real.
+                    // Remove menções de parcelamento antes de procurar preços,
+                    // senão o valor da parcela seria confundido com o preço à vista.
                     const textoContainer = (container.innerText || '')
                         .replace(/\d+\s*x\s*R\$\s?[\d.,]+/gi, '');
 
@@ -573,9 +442,6 @@ async function buscarProdutosMercadoLivre(termoBusca) {
                         textoContainer.matchAll(/R\$\s?[\d.,]+/g)
                     ).map(m => extrairNumero(m[0])).filter(n => n !== null);
 
-                    // O preço atual é o menor valor de "R$" encontrado que
-                    // NÃO seja o preço antigo riscado (quando existe um
-                    // desconto, o valor à vista é sempre o menor).
                     let preco = null;
                     if (todosOsPrecos.length > 0) {
                         const semAntigo = precoAntigo
@@ -595,13 +461,11 @@ async function buscarProdutosMercadoLivre(termoBusca) {
 
             });
 
-            console.log(`🔬 [diagnóstico busca ML] "${termoBusca}" -> ${candidatos.length} candidato(s) extraído(s)`);
-
             return candidatos;
 
         } catch (erro) {
 
-            console.log(`🔬 [diagnóstico busca ML] ERRO ao buscar "${termoBusca}": ${erro.message}`);
+            console.log(`[busca ML] erro ao buscar "${termoBusca}": ${erro.message}`);
             return [];
 
         } finally {
@@ -614,17 +478,6 @@ async function buscarProdutosMercadoLivre(termoBusca) {
 
 }
 
-// ======================================
-// Pontua e decide: recebe o produto que a IA extraiu + a lista de
-// candidatos reais da busca, e devolve um resultado com um destes status:
-//
-//  - "confiante"     -> achou um candidato claro, já preenche sozinho
-//  - "ambiguo"        -> devolve até 3 melhores candidatos pra escolha manual
-//  - "nao_encontrado" -> a busca não trouxe nenhum candidato utilizável
-//
-// Extraída como função separada (sem Puppeteer) só pra poder ser testada
-// isoladamente, sem precisar de navegador de verdade.
-// ======================================
 function decidirMelhorCandidato(produtoIA, candidatos) {
 
     const candidatosValidos = candidatos.filter(c => c.titulo && typeof c.preco === 'number');
@@ -667,12 +520,9 @@ function decidirMelhorCandidato(produtoIA, candidatos) {
 
 }
 
-// ======================================
-// Função de conveniência que junta busca + decisão — é essa que as rotas
-// vão chamar. Nunca lança erro (mesma filosofia do resto do resolvedor):
-// se algo falhar na busca, cai em "nao_encontrado" e a importação segue
-// normalmente, sem travar o restante dos produtos.
-// ======================================
+// Função de conveniência que junta busca + decisão, chamada pelas rotas.
+// Nunca lança erro: se algo falhar na busca, cai em "nao_encontrado" e a
+// importação segue normalmente para os demais produtos.
 async function encontrarProdutoMercadoLivre(produtoIA) {
 
     try {
@@ -682,7 +532,7 @@ async function encontrarProdutoMercadoLivre(produtoIA) {
 
     } catch (erro) {
 
-        console.log(`🔬 [diagnóstico busca ML] ERRO inesperado ao processar "${produtoIA.titulo}": ${erro.message}`);
+        console.log(`[busca ML] erro inesperado ao processar "${produtoIA.titulo}": ${erro.message}`);
         return { status: 'nao_encontrado' };
 
     }
