@@ -6,7 +6,7 @@ const { adicionarProduto } = require('./produtos');
 const IMPORT_PATH = path.join(__dirname, 'importar.json');
 
 if (!fs.existsSync(IMPORT_PATH)) {
-    console.log('❌ Arquivo importar.json não encontrado.');
+    console.log('Arquivo importar.json não encontrado.');
     process.exit();
 }
 
@@ -33,9 +33,9 @@ produtos.forEach(produto => {
 
 console.clear();
 
-console.log("═══════════════════════════════════════");
-console.log("📥 IMPORTADOR PROMOBOT");
-console.log("═══════════════════════════════════════");
-console.log(`📦 Produtos lidos : ${produtos.length}`);
-console.log(`➕ Importação finalizada.`);
-console.log("═══════════════════════════════════════");
+console.log("===========================================");
+console.log("IMPORTADOR PROMOBOT");
+console.log("===========================================");
+console.log(`Produtos lidos: ${produtos.length}`);
+console.log(`Importação finalizada.`);
+console.log("===========================================");
