@@ -1,20 +1,13 @@
-// buscar-produtos.js
 // Busca produtos automaticamente no Mercado Livre, usando os termos de busca
-// configurados em config.json. Gera um arquivo candidatos.json com os
-// resultados, para você revisar e completar com o link de afiliado.
+// configurados em config.json, e gera um arquivo candidatos.json com os
+// resultados, para revisar e completar com o link de afiliado depois.
 //
-// Como usar:
-//   node buscar-produtos.js
+// Uso: node buscar-produtos.js
 //
-// O QUE ESSE SCRIPT FAZ AUTOMATICAMENTE:
-//   - Busca produtos reais no Mercado Livre pelo nicho configurado
-//   - Pega nome, preço e imagem de cada produto
-//
-// O QUE AINDA PRECISA SER FEITO NA MÃO (limitação do Mercado Livre, não nossa):
-//   - O Mercado Livre não tem API pública para gerar o link de AFILIADO.
-//     Você recebe o link "normal" do produto (linkOriginal) e precisa colar
-//     ele no painel https://afiliados.mercadolivre.com.br para virar link de
-//     afiliado. Depois cole o link gerado no campo "linkAfiliado".
+// O Mercado Livre não tem API pública para gerar link de afiliado direto,
+// então o script só traz o link "normal" do produto (linkOriginal) — ele
+// precisa ser colado em https://afiliados.mercadolivre.com.br pra virar
+// link de afiliado, que aí sim vai no campo "linkAfiliado".
 
 const fs = require('fs');
 const path = require('path');
@@ -51,7 +44,7 @@ async function main() {
   const config = carregarConfig();
   const termos = config.termosDeBusca || [config.nicho];
 
-  console.log(`🔎 Buscando produtos para o nicho: "${config.nicho}"`);
+  console.log(`Buscando produtos para o nicho: "${config.nicho}"`);
   console.log(`Termos de busca: ${termos.join(', ')}\n`);
 
   let todosProdutos = [];
@@ -77,7 +70,7 @@ async function main() {
 
   fs.writeFileSync(CANDIDATOS_PATH, JSON.stringify(unicos, null, 2));
 
-  console.log(`\n✅ ${unicos.length} produtos únicos salvos em candidatos.json`);
+  console.log(`\n${unicos.length} produtos únicos salvos em candidatos.json`);
   console.log('\nPróximo passo:');
   console.log('1. Abra candidatos.json');
   console.log('2. Para cada produto que quiser usar, copie o "linkOriginal"');
@@ -87,6 +80,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('❌ Erro geral:', err);
+  console.error('Erro geral:', err);
   process.exit(1);
 });
