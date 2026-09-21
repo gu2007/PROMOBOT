@@ -1,4 +1,4 @@
-﻿async function cadastrarProduto() {
+async function cadastrarProduto() {
 
     const dados = {
         marketplace: document.getElementById("marketplace").value,
@@ -55,10 +55,8 @@
 
 }
 
-// ======================================
 // Mostra uma pré-visualização da imagem colada, pra confirmar visualmente
 // que o link é mesmo de uma foto válida antes de salvar.
-// ======================================
 function atualizarPratinhaImagem() {
 
     const url = document.getElementById("imagem").value.trim();
