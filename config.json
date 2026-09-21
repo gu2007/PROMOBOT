@@ -1,12 +1,4 @@
 {
-  "mercadoLivre": {
-    "clientId": "3630659079223462",
-    "clientSecret": "rd56009ezLV2HICM7pAqEUywmlG1p8x6",
-    "redirectUri": "https://www.google.com"
-  },
-  "gemini": {
-    "apiKey": "AQ.Ab8RN6KfoIm5Q8l7l7fsdZj2uVYD8xuBGNWoaEYPcstsxYVuqQ"
-  },
   "nicho": "ferramentas automotivas",
   "termosDeBusca": [
     "kit ferramentas automotivas",
