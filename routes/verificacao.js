@@ -1,7 +1,5 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
-const fs = require('fs');
-const path = require('path');
 const { GoogleGenAI } = require('@google/genai');
 
 const {
@@ -10,28 +8,17 @@ const {
     buscarProduto
 } = require('../produtos');
 
-const CONFIG_PATH = path.join(__dirname, '..', 'config.json');
-
-function carregarConfig() {
-    return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-}
-
 function obterChaveGemini() {
-    const config = carregarConfig();
-    if (!config.gemini || !config.gemini.apiKey) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
         throw new Error('Chave da API do Gemini não configurada.');
     }
-    return config.gemini.apiKey;
+    return apiKey;
 }
 
-// ======================================
-// Adiciona um parâmetro único (baseado no horário atual) na URL, tentando
-// "enganar" qualquer cache que a ferramenta de leitura de página use por
-// endereço exato — fizemos testes e confirmamos que a mesma URL, consultada
-// em dias diferentes, retornou o preço IDÊNTICO mesmo o preço real tendo
-// mudado de verdade (forte indício de cache). Um parâmetro novo a cada
-// chamada faz a URL parecer "nunca vista antes".
-// ======================================
+// Adiciona um parâmetro único (baseado no horário atual) na URL pra evitar
+// cache: confirmamos que a mesma URL, consultada em dias diferentes,
+// retornou o preço idêntico mesmo o preço real tendo mudado.
 function montarUrlSemCache(url) {
 
     try {
@@ -43,21 +30,18 @@ function montarUrlSemCache(url) {
 
     } catch (erro) {
 
-        // Se a URL for inválida por algum motivo, usa ela do jeito que está
         return url;
 
     }
 
 }
 
-// ======================================
-// Consulta a IA sobre UM produto: ainda está disponível? qual o preço atual?
-// e, se ainda não tivermos, qual a URL da foto principal do produto?
-// Usa o "linkOriginal" (página direta do produto, sem afiliado) — já provamos
-// que os links de afiliado encurtados (ex: meli.la/xxx, link.amazon/xxx)
-// bloqueiam esse tipo de acesso automatizado, então essa verificação depende
-// do linkOriginal estar preenchido no cadastro do produto.
-// ======================================
+// Consulta a IA sobre um produto: ainda está disponível? qual o preço
+// atual? e, se ainda não tivermos, qual a URL da foto principal? Usa o
+// linkOriginal (página direta, sem afiliado) — os links de afiliado
+// encurtados (meli.la/xxx, link.amazon/xxx) bloqueiam esse tipo de acesso
+// automatizado, então essa verificação depende do linkOriginal estar
+// preenchido no cadastro do produto.
 async function verificarProdutoUnico(ai, produto, onProgresso) {
 
     const precisaDeImagem = !produto.imagem;
@@ -105,14 +89,14 @@ Retorne APENAS este JSON, sem nenhum texto antes ou depois, sem marcadores de c�
     }
 
     // Log de diagnóstico: mostra o que a ferramenta de leitura de página
-    // realmente conseguiu buscar, segundo o próprio Gemini (não depende
-    // do que o modelo "acha" que aconteceu). Ajuda a diferenciar bloqueio
-    // real de acesso de uma resposta conservadora demais do modelo.
+    // realmente conseguiu buscar, segundo o próprio Gemini — ajuda a
+    // diferenciar bloqueio real de acesso de uma resposta conservadora
+    // demais do modelo.
     try {
         const metadados = ultimoChunk?.candidates?.[0]?.urlContextMetadata;
-        console.log(`🔬 [diagnóstico] urlContextMetadata para "${urlParaLeitura}":`, JSON.stringify(metadados));
+        console.log(`[verificacao] urlContextMetadata para "${urlParaLeitura}":`, JSON.stringify(metadados));
     } catch (erroLog) {
-        console.log('🔬 [diagnóstico] Não foi possível ler urlContextMetadata:', erroLog.message);
+        console.log('[verificacao] não foi possível ler urlContextMetadata:', erroLog.message);
     }
 
     let texto = textoAcumulado.trim();
@@ -120,23 +104,17 @@ Retorne APENAS este JSON, sem nenhum texto antes ou depois, sem marcadores de c�
 
     const resultado = JSON.parse(texto);
 
-    console.log(`🔬 [diagnóstico] resultado completo da IA para produto "${produto.titulo.slice(0, 40)}":`, JSON.stringify(resultado));
-
     return resultado;
 
 }
 
-// ======================================
-// Roda a verificação nos produtos ativos, um de cada vez, com uma pequena
-// pausa entre eles pra não estourar limite de requisições.
+// Roda a verificação nos produtos ativos, um de cada vez, com pausa entre
+// eles pra não estourar limite de requisições.
 //
-// Parâmetros:
-// - idsEspecificos: se informado, verifica só esses produtos.
-// - onProgresso: função opcional chamada após CADA produto verificado, com
-//   um evento descrevendo o que aconteceu. Usada pela rota manual (streaming
-//   em tempo real pro navegador); o job automático semanal não passa essa
-//   função, e o comportamento continua sendo só registrar nos logs.
-// ======================================
+// idsEspecificos: se informado, verifica só esses produtos.
+// onProgresso: chamada após cada produto verificado, com um evento
+// descrevendo o que aconteceu. Usada pela rota manual (streaming em tempo
+// real pro navegador); o job automático semanal não passa essa função.
 async function rodarVerificacaoSemanal(idsEspecificos, onProgresso) {
 
     const resumo = {
@@ -155,7 +133,7 @@ async function rodarVerificacaoSemanal(idsEspecificos, onProgresso) {
     try {
         apiKey = obterChaveGemini();
     } catch (erro) {
-        console.error('❌ Verificação abortada:', erro.message);
+        console.error('Verificação abortada:', erro.message);
         resumo.erro = erro.message;
         if (onProgresso) onProgresso({ tipo: 'erro_geral', mensagem: erro.message });
         return resumo;
@@ -176,8 +154,7 @@ async function rodarVerificacaoSemanal(idsEspecificos, onProgresso) {
 
     resumo.semLinkOriginal = produtosAtivos.length - produtosParaChecar.length;
 
-    const mensagemInicio = `🔎 Verificação iniciada: ${produtosParaChecar.length} produto(s) para checar (${resumo.semLinkOriginal} pulado(s) por não ter link original cadastrado).`;
-    console.log(mensagemInicio);
+    console.log(`Verificação iniciada: ${produtosParaChecar.length} produto(s) para checar (${resumo.semLinkOriginal} pulado(s) por não ter link original cadastrado).`);
 
     if (onProgresso) {
         onProgresso({
@@ -198,7 +175,7 @@ async function rodarVerificacaoSemanal(idsEspecificos, onProgresso) {
             if (resultado.conseguiuAcessar !== true) {
 
                 resumo.naoConseguiuAcessar++;
-                console.log(`ℹ️ Produto #${produto.id} não pôde ser confirmado (link bloqueado/inacessível), nada foi alterado: ${produto.titulo.slice(0, 50)}`);
+                console.log(`Produto #${produto.id} não pôde ser confirmado (link bloqueado/inacessível), nada foi alterado: ${produto.titulo.slice(0, 50)}`);
 
                 if (onProgresso) {
                     onProgresso({
@@ -222,7 +199,7 @@ async function rodarVerificacaoSemanal(idsEspecificos, onProgresso) {
 
             if (!jaTinhaImagemAntes && resultado.imagemUrl) {
                 resumo.imagensCapturadas++;
-                console.log(`🖼️ Produto #${produto.id} ganhou uma foto: ${produto.titulo.slice(0, 50)}`);
+                console.log(`Produto #${produto.id} ganhou uma foto: ${produto.titulo.slice(0, 50)}`);
             }
 
             let resultadoTipo = 'sem_mudanca';
@@ -232,7 +209,7 @@ async function rodarVerificacaoSemanal(idsEspecificos, onProgresso) {
                 resumo.alteracoesEncontradas++;
                 resultadoTipo = 'indisponivel';
                 resumo.detalhes.push(`#${produto.id} ficou indisponível: ${produto.titulo.slice(0, 50)}`);
-                console.log(`⚠️ Produto #${produto.id} indisponível, desativado: ${produto.titulo.slice(0, 50)}`);
+                console.log(`Produto #${produto.id} indisponível, desativado: ${produto.titulo.slice(0, 50)}`);
 
             } else if (produtoAtualizado.tipoAlteracao === 'preco_sugerido') {
 
@@ -240,7 +217,7 @@ async function rodarVerificacaoSemanal(idsEspecificos, onProgresso) {
                     resumo.sugestoesPendentes++;
                     resultadoTipo = 'sugestao_pendente';
                     resumo.detalhes.push(`#${produto.id} diferença grande de preço (R$${precoAntes} -> R$${resultado.preco}), aguardando sua confirmação: ${produto.titulo.slice(0, 50)}`);
-                    console.log(`🟡 Produto #${produto.id} diferença de preço grande demais pra aplicar sozinho, aguardando confirmação: R$${precoAntes} -> R$${resultado.preco}`);
+                    console.log(`Produto #${produto.id} diferença de preço grande demais pra aplicar sozinho, aguardando confirmação: R$${precoAntes} -> R$${resultado.preco}`);
                 }
 
             } else if (typeof resultado.preco === 'number' && Math.abs(resultado.preco - precoAntes) / Math.max(resultado.preco, precoAntes) >= 0.10) {
@@ -248,7 +225,7 @@ async function rodarVerificacaoSemanal(idsEspecificos, onProgresso) {
                 resumo.alteracoesEncontradas++;
                 resultadoTipo = 'preco_atualizado';
                 resumo.detalhes.push(`#${produto.id} preço mudou de R$${precoAntes} para R$${resultado.preco}: ${produto.titulo.slice(0, 50)}`);
-                console.log(`💰 Produto #${produto.id} preço atualizado: R$${precoAntes} -> R$${resultado.preco}`);
+                console.log(`Produto #${produto.id} preço atualizado: R$${precoAntes} -> R$${resultado.preco}`);
 
             }
 
@@ -267,7 +244,7 @@ async function rodarVerificacaoSemanal(idsEspecificos, onProgresso) {
         } catch (erro) {
 
             resumo.falhas++;
-            console.error(`❌ Falha ao verificar produto #${produto.id}:`, erro.message);
+            console.error(`Falha ao verificar produto #${produto.id}:`, erro.message);
 
             if (onProgresso) {
                 onProgresso({
@@ -281,12 +258,11 @@ async function rodarVerificacaoSemanal(idsEspecificos, onProgresso) {
 
         }
 
-        // Pequena pausa entre cada chamada pra não estourar limite de requisições por minuto
         await new Promise(resolve => setTimeout(resolve, 4000));
 
     }
 
-    console.log(`✅ Verificação concluída: ${resumo.totalVerificados} verificado(s), ${resumo.alteracoesEncontradas} alteração(ões), ${resumo.sugestoesPendentes} sugestão(ões) pendente(s), ${resumo.imagensCapturadas} imagem(ns) capturada(s), ${resumo.naoConseguiuAcessar} não confirmado(s), ${resumo.semLinkOriginal} sem link original, ${resumo.falhas} falha(s).`);
+    console.log(`Verificação concluída: ${resumo.totalVerificados} verificado(s), ${resumo.alteracoesEncontradas} alteração(ões), ${resumo.sugestoesPendentes} sugestão(ões) pendente(s), ${resumo.imagensCapturadas} imagem(ns) capturada(s), ${resumo.naoConseguiuAcessar} não confirmado(s), ${resumo.semLinkOriginal} sem link original, ${resumo.falhas} falha(s).`);
 
     if (onProgresso) {
         onProgresso({ tipo: 'final', resumo });
@@ -296,13 +272,11 @@ async function rodarVerificacaoSemanal(idsEspecificos, onProgresso) {
 
 }
 
-// ======================================
 // Rota manual, pra testar a verificação sem esperar a semana passar.
 // Aceita { produtoIds: [1, 2] } no corpo pra testar só em alguns produtos.
 // Responde em streaming (SSE), mostrando o progresso produto por produto em
-// tempo real — evita que a tela fique "travada" esperando minutos sem
-// feedback (o que causava a conexão cair em verificações grandes).
-// ======================================
+// tempo real — evita que a tela fique travada esperando minutos sem
+// feedback, o que causava a conexão cair em verificações grandes.
 router.post('/rodar-agora', async (req, res) => {
 
     res.setHeader('Content-Type', 'text/event-stream');
