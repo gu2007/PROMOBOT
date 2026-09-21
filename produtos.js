@@ -1,4 +1,4 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const path = require('path');
 
 const CONFIG_PATH = path.join(__dirname, 'config.json');
@@ -42,8 +42,8 @@ const marcasConhecidas = [
 
 const PRODUCTS_PATH = path.join(__dirname, 'products.json');
 
-// A partir daqui: com quanto de "parecido" (0 a 1) dois títulos já contam como suspeitos,
-// e qual a diferença de preço máxima aceitável (0.15 = 15%) para reforçar a suspeita.
+// Com quanto de "parecido" (0 a 1) dois títulos já contam como suspeitos, e
+// qual a diferença de preço máxima aceitável (15%) para reforçar a suspeita.
 const SIMILARIDADE_MINIMA_TITULO = 0.5;
 const TOLERANCIA_PRECO = 0.15;
 
@@ -52,7 +52,7 @@ function normalizarTitulo(titulo) {
     return (titulo || '')
         .toString()
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[̀-ͯ]/g, '')
         .toLowerCase()
         .replace(/[^a-z0-9\s]/g, ' ')
         .replace(/\s+/g, ' ')
@@ -95,9 +95,6 @@ function precosSaoProximos(precoA, precoB) {
 
 }
 
-// Procura, entre os produtos já cadastrados NO MESMO MARKETPLACE, algum com título
-// muito parecido e preço próximo do produto novo. Se achar, retorna esse produto
-// (o "original" suspeito); se não achar nada parecido o suficiente, retorna null.
 function normalizarMarketplace(marketplace) {
 
     return (marketplace || '')
@@ -108,6 +105,9 @@ function normalizarMarketplace(marketplace) {
 
 }
 
+// Procura, entre os produtos já cadastrados no mesmo marketplace, algum com
+// título muito parecido e preço próximo do produto novo. Se achar, retorna
+// esse produto (o "original" suspeito); senão, retorna null.
 function encontrarDuplicataSuspeita(produtoNovo, produtosExistentes) {
 
     const marketplaceNovo = normalizarMarketplace(produtoNovo.marketplace);
@@ -130,12 +130,10 @@ function encontrarDuplicataSuspeita(produtoNovo, produtosExistentes) {
 
 }
 
-// ======================================
 // Um produto só conta como "com desconto real" se tiver um preço antigo
-// preenchido E esse preço antigo for de fato maior que o preço atual. Sem
-// isso, não é uma promoção de verdade — só um preço normal, e por isso o
-// produto não deve ficar ativo (nem ser mandado pro grupo).
-// ======================================
+// preenchido e esse preço antigo for de fato maior que o preço atual. Sem
+// isso não é uma promoção de verdade, só um preço normal — e por isso o
+// produto não deve ficar ativo nem ser mandado pro grupo.
 function produtoSemDescontoReal(produto) {
 
     const precoAntigo = Number(produto.precoAntigo);
@@ -183,14 +181,10 @@ function adicionarProduto(produtoNovo) {
         Object.assign(existente, produtoNovo);
 
         existente.id = existente.id;
-
         existente.enviado = existente.enviado || 0;
-
         existente.criadoEm = existente.criadoEm;
-
         existente.atualizadoEm = new Date().toISOString();
 
-        // Nunca deixa ativo um produto sem desconto real, mesmo numa atualização
         if (produtoSemDescontoReal(existente)) {
             existente.ativo = false;
         }
@@ -203,13 +197,9 @@ function adicionarProduto(produtoNovo) {
                 : 1;
 
         produtoNovo.enviado = 0;
-
         produtoNovo.ultimaDivulgacao = null;
-
         produtoNovo.criadoEm = new Date().toISOString();
-
         produtoNovo.atualizadoEm = null;
-
         produtoNovo.ativo = typeof produtoNovo.ativo === 'boolean' ? produtoNovo.ativo : true;
 
         const duplicataSuspeita = encontrarDuplicataSuspeita(produtoNovo, produtos);
@@ -219,7 +209,7 @@ function adicionarProduto(produtoNovo) {
             produtoNovo.duplicataSuspeita = true;
             produtoNovo.duplicataDeId = duplicataSuspeita.id;
 
-            // Trava a divulgação até você revisar manualmente na aba de Duplicados,
+            // Trava a divulgação até revisão manual na aba de Duplicados,
             // evitando mandar pro grupo um produto que pode ser repetido.
             produtoNovo.ativo = false;
 
@@ -230,9 +220,6 @@ function adicionarProduto(produtoNovo) {
 
         }
 
-        // Nunca deixa ativo um produto sem desconto real (preço antigo
-        // ausente ou não maior que o preço atual) — isso tem prioridade
-        // sobre qualquer outra decisão de ativação.
         if (produtoSemDescontoReal(produtoNovo)) {
             produtoNovo.ativo = false;
         }
@@ -305,12 +292,11 @@ function proximoProduto() {
 
     if (produtos.length === 0) return null;
 
-    // Prioridade continua sendo quem foi menos enviado (fairness/rotação) —
-    // isso é o que garante que todo produto tenha sua vez. A mudança é que,
-    // dentro do grupo de "quem foi enviado o mesmo número de vezes", a
-    // escolha agora é ALEATÓRIA em vez de seguir a ordem de cadastro (id)
-    // ou a data da última divulgação. Isso evita que produtos da mesma
-    // marca (cadastrados em sequência) saiam um atrás do outro.
+    // Prioridade continua sendo quem foi menos enviado (fairness/rotação).
+    // Dentro do grupo de quem foi enviado o mesmo número de vezes, a
+    // escolha é aleatória em vez de seguir a ordem de cadastro ou a data da
+    // última divulgação — evita que produtos da mesma marca, cadastrados em
+    // sequência, saiam um atrás do outro.
     const menorEnviado = Math.min(...produtos.map(p => p.enviado || 0));
     const candidatos = produtos.filter(p => (p.enviado || 0) === menorEnviado);
 
@@ -323,7 +309,6 @@ function proximoProduto() {
     const produtoReal = todos.find(p => p.id === escolhido.id);
 
     produtoReal.enviado++;
-
     produtoReal.ultimaDivulgacao = new Date().toISOString();
 
     salvarProdutos(todos);
@@ -339,20 +324,15 @@ const TOLERANCIA_MUDANCA_PRECO = 0.10;
 
 // Acima disso (30%), a diferença é grande demais pra confiar cegamente na
 // leitura da IA — é mais provável ser erro de leitura (preço parcelado,
-// variação errada, produto errado) do que uma promoção real. Nesses casos,
-// o sistema NÃO aplica sozinho: só sugere, e espera sua confirmação manual.
+// variação errada, produto errado) do que uma promoção real. Nesses casos
+// o sistema não aplica sozinho, só sugere e espera confirmação manual.
 const TOLERANCIA_SUGESTAO_MAXIMA = 0.30;
 
-// Aplica o resultado da verificação de um produto:
-// - se ficou indisponível: desativa o produto e marca pra revisão
-// - se o preço mudou pouco (10%-30%): atualiza sozinho e marca pra revisão
-// - se o preço mudou MUITO (acima de 30%): NÃO mexe no preço, só guarda a
-//   sugestão pra você aprovar manualmente (evita aplicar sozinho um possível
-//   erro grande de leitura da IA)
-// - se a IA encontrou uma foto do produto e ainda não tínhamos: salva ela,
-//   sem gerar alerta na aba de revisão (não é uma "alteração" que precisa de
-//   atenção, é só um dado que estava faltando)
-// - se nada disso: não mexe em nada
+// Aplica o resultado da verificação de um produto: se ficou indisponível,
+// desativa e marca pra revisão; se o preço mudou pouco (10%-30%), atualiza
+// sozinho e marca pra revisão; se mudou muito (acima de 30%), não mexe no
+// preço, só guarda a sugestão pra aprovação manual; se a IA achou uma foto
+// que ainda não tínhamos, salva sem gerar alerta de revisão.
 function aplicarResultadoVerificacao(id, resultado) {
 
     const produtos = carregarProdutos();
@@ -392,7 +372,6 @@ function aplicarResultadoVerificacao(id, resultado) {
 
         if (diferenca > TOLERANCIA_SUGESTAO_MAXIMA) {
 
-            // Diferença grande demais: guarda como sugestão, NÃO aplica sozinho
             produto.precoSugerido = resultado.preco;
             produto.alteracaoDetectada = true;
             produto.tipoAlteracao = 'preco_sugerido';
@@ -405,7 +384,6 @@ function aplicarResultadoVerificacao(id, resultado) {
 
         if (diferenca >= TOLERANCIA_MUDANCA_PRECO) {
 
-            // Diferença dentro da faixa confiável: aplica sozinho
             produto.precoAnterior = precoAtual;
             produto.preco = resultado.preco;
             produto.alteracaoDetectada = true;
@@ -452,9 +430,9 @@ module.exports = {
     aplicarResultadoVerificacao,
     listarAlteracoesDetectadas,
 
-    // Exportadas pra serem reaproveitadas pelo buscador automático de produto
-    // no Mercado Livre (resolvedorAfiliado.js), em vez de duplicar a lógica
-    // de comparação de título/preço em dois lugares.
+    // Reaproveitadas pelo buscador automático de produto no Mercado Livre
+    // (resolvedorAfiliado.js), pra não duplicar a lógica de comparação de
+    // título/preço em dois lugares.
     calcularSimilaridadeTitulos,
     precosSaoProximos
 
