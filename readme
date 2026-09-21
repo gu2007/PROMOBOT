@@ -1,7 +1,27 @@
-# Robô de Ofertas de Afiliados para WhatsApp
+# PROMOBOT — Robô de Ofertas de Afiliados para WhatsApp
 
-Busca produtos automaticamente no seu nicho, envia com imagem + texto para
-um grupo de WhatsApp, em horários e quantidade configuráveis.
+Sistema de automação de marketing de afiliados que busca produtos em alta no Mercado Livre e na Amazon, gera texto de divulgação e envia ofertas (imagem + texto + link) para um grupo de WhatsApp em horários configuráveis. Inclui um dashboard administrativo completo para gerenciar o catálogo de produtos sem tocar em código.
+
+Construído para automatizar a rotina de divulgação de afiliados de ponta a ponta — da descoberta do produto ao envio — mantendo o controle humano sobre o único passo que as plataformas não deixam automatizar de forma segura: a geração do link de afiliado.
+
+## Funcionalidades
+
+- **Agendamento inteligente de envios**: respeita horário e quantidade configurados por hora, distribuindo os envios em minutos aleatórios para não parecer spam.
+- **Importador com IA**: cadastro de produtos a partir de URL, PDF ou texto colado, usando a API do Gemini com streaming (SSE) para extração dos dados.
+- **Resolução automática de link de afiliado**: automação com Puppeteer para Mercado Livre (contornando o gate de verificação de conta) e Amazon (resolução de redirecionamento), com processamento em lote e progresso em tempo real via SSE.
+- **Regras de qualidade do catálogo**: bloqueio automático de produtos sem desconto real, com opção de desativação em massa sem consumir créditos de IA.
+- **Dashboard administrativo**: gráficos (Chart.js), busca e paginação de produtos, log de atividade em streaming, tudo protegido por login.
+- **Armazenamento simples em JSON**: sem dependência de banco de dados externo, fácil de inspecionar e versionar.
+- **Orquestração opcional via n8n**: endpoint HTTP (`/send`) que permite disparar envios extras ou integrar com outros canais (Instagram/Facebook).
+
+## Stack técnica
+
+- **Backend**: Node.js, Express
+- **WhatsApp**: whatsapp-web.js
+- **IA**: Gemini API (extração de produtos, streaming SSE)
+- **Automação de navegador**: Puppeteer (resolução de links de afiliado)
+- **Frontend do dashboard**: HTML, CSS e JavaScript puros + Chart.js
+- **Deploy**: Oracle Cloud VPS, gerenciado com PM2
 
 ## ⚠️ Avisos importantes antes de começar
 
