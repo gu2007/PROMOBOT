@@ -1,4 +1,4 @@
-﻿const parametros = new URLSearchParams(window.location.search);
+const parametros = new URLSearchParams(window.location.search);
 
 const id = parametros.get("id");
 
@@ -89,10 +89,8 @@ async function salvarProduto() {
 
 }
 
-// ======================================
 // Mostra uma pré-visualização da imagem colada, pra confirmar visualmente
 // que o link é mesmo de uma foto válida antes de salvar.
-// ======================================
 function atualizarPratinhaImagem() {
 
     const url = document.getElementById("imagem").value.trim();
