@@ -188,7 +188,7 @@ function perguntarLink(
 
             });
 
-            console.log('\n✅ Produto cadastrado!');
+            console.log('\nProduto cadastrado.');
 
             rl.question('\nCadastrar outro produto? (S/N): ', r => {
 
