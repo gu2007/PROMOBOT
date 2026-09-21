@@ -1,14 +1,12 @@
-﻿let todosOsProdutos = [];
+let todosOsProdutos = [];
 let abaAtiva = "todos";
 let paginaAtual = 0;
 
 const PRODUTOS_POR_LINHA = 20;
 const LINHAS_POR_PAGINA = 12;
 
-// ======================================
 // Normaliza o nome do marketplace (mesma lógica usada na dashboard), pra
 // agrupar variações de maiúscula/espaço sob a mesma aba.
-// ======================================
 function normalizarNomeMarketplace(nome) {
 
     return (nome || "")
@@ -48,10 +46,8 @@ async function carregarProdutos() {
 
 }
 
-// ======================================
 // Monta a barra de abas (Todos + uma por marketplace encontrado), com a
 // contagem de produtos de cada uma.
-// ======================================
 function renderizarAbas() {
 
     const contagem = {};
@@ -93,10 +89,8 @@ function selecionarAba(chave) {
 
 }
 
-// ======================================
 // Divide uma lista em grupos menores (ex: 47 produtos, grupos de 20 ->
 // [20, 20, 7]). Cada grupo vira uma linha própria com seu próprio carrossel.
-// ======================================
 function dividirEmGrupos(lista, tamanho) {
 
     const grupos = [];
@@ -109,9 +103,7 @@ function dividirEmGrupos(lista, tamanho) {
 
 }
 
-// ======================================
 // Monta o HTML de um único cartão de produto (usado dentro de cada linha).
-// ======================================
 function montarCartaoProduto(produto) {
 
     const linkSuspeito = !produto.linkAfiliado || produto.linkAfiliado === "LINK_NAO_CONFIRMADO" || !produto.linkAfiliado.startsWith("http");
@@ -162,10 +154,8 @@ function montarCartaoProduto(produto) {
 
 }
 
-// ======================================
 // Monta uma linha inteira: setas + carrossel horizontal com os produtos
 // desse grupo (até 20). Cada linha rola de lado de forma independente.
-// ======================================
 function montarLinhaCarrossel(produtosDaLinha) {
 
     const wrapper = document.createElement("div");
@@ -204,10 +194,8 @@ function montarLinhaCarrossel(produtosDaLinha) {
 
 }
 
-// ======================================
 // Monta a navegação numerada (1, 2, 3... + "Seguinte ›"), usada quando o
 // total de linhas passa do limite de uma página.
-// ======================================
 function montarPaginacao(totalPaginas) {
 
     const nav = document.createElement("div");
@@ -247,11 +235,9 @@ function montarPaginacao(totalPaginas) {
 
 }
 
-// ======================================
 // Filtra pela aba ativa + termo de busca, divide em linhas de até 20
 // produtos, limita a 12 linhas por página (com navegação numerada quando
 // precisa de mais páginas), e desenha cada linha com seu próprio carrossel.
-// ======================================
 function renderizarGrade() {
 
     const container = document.getElementById("gradeProdutosContainer");
@@ -377,10 +363,8 @@ document.getElementById("filtroBusca").addEventListener("input", () => {
     renderizarGrade();
 });
 
-// ======================================
 // Adiciona uma linha colorida na área de log (mesmo padrão visual usado na
 // Verificação de Preços e na Importação por IA).
-// ======================================
 function adicionarLinhaLogResolucao(texto, tipo) {
 
     const area = document.getElementById("areaResolucao");
@@ -392,13 +376,11 @@ function adicionarLinhaLogResolucao(texto, tipo) {
 
 }
 
-// ======================================
 // Dispara a resolução automática (link original + imagem) em todos os
 // produtos do Mercado Livre e Amazon que ainda estão com algum campo
 // faltando — útil pra completar produtos antigos, cadastrados antes dessa
 // funcionalidade existir. Mostra o progresso produto por produto, em tempo
 // real, via streaming (SSE).
-// ======================================
 async function resolverPendentes() {
 
     const botao = document.getElementById("btnResolverPendentes");
@@ -486,12 +468,10 @@ async function resolverPendentes() {
 
 }
 
-// ======================================
 // Corrige de uma vez todos os produtos ativos que não têm desconto real
 // (sem preço antigo, ou preço antigo não maior que o atual), desativando
 // eles. Não usa IA nenhuma — é só um filtro nos dados que já temos, então é
 // instantâneo.
-// ======================================
 async function corrigirSemDesconto() {
 
     const botao = document.getElementById("btnCorrigirSemDesconto");
