@@ -1,4 +1,4 @@
-﻿async function carregarAlteracoes() {
+async function carregarAlteracoes() {
 
     try {
 
@@ -161,10 +161,8 @@ function editarProduto(id) {
 
 }
 
-// ======================================
-// Rótulos amigáveis + o "tipo" visual (cor) de cada resultado, usados no
-// log de atividade em tempo real.
-// ======================================
+// Rótulos amigáveis + o "tipo" visual (cor) de cada resultado, usados no log
+// de atividade em tempo real.
 function descreverResultado(evento) {
 
     switch (evento.resultadoTipo) {
@@ -204,11 +202,9 @@ function tipoLogParaResultado(resultadoTipo) {
 
 }
 
-// ======================================
 // Funções do log de atividade visual (substituem o antigo terminal preto):
 // linhas de status coloridas por tipo, e um bloco recolhível com o prompt
 // que foi enviado à IA pra cada produto verificado.
-// ======================================
 function adicionarLinhaLog(texto, tipo) {
     const areaStreaming = document.getElementById('areaStreaming');
     const linha = document.createElement('div');
@@ -232,11 +228,9 @@ function mostrarPrompt(texto) {
     areaStreaming.scrollTop = areaStreaming.scrollHeight;
 }
 
-// ======================================
 // Roda a verificação e acompanha o progresso em tempo real (SSE), evitando
 // que a tela fique "travada" esperando minutos sem feedback — o que estava
 // causando a conexão cair em verificações com muitos produtos.
-// ======================================
 async function rodarVerificacaoAgora() {
 
     const botao = document.getElementById("btnRodarAgora");
