@@ -1,4 +1,4 @@
-﻿const express = require("express");
+const express = require("express");
 const router = express.Router();
 const {
     listarProdutos,
@@ -9,12 +9,9 @@ const {
 } = require("../produtos");
 const { ehLinkConhecido, resolverLinkAfiliado } = require("../resolvedorAfiliado");
 
-// ======================================
 // Dispara em segundo plano (sem atrasar a resposta pro navegador) a
 // resolução automática do link original + imagem, quando o produto é de um
-// marketplace conhecido (Mercado Livre ou Amazon) e ainda está faltando
-// algum desses dois campos.
-// ======================================
+// marketplace conhecido e ainda está faltando algum desses dois campos.
 function dispararResolucaoSeNecessario(produto) {
 
     if (!produto || !ehLinkConhecido(produto.linkAfiliado)) {
@@ -53,33 +50,26 @@ function dispararResolucaoSeNecessario(produto) {
                 produtos[indice].atualizadoEm = new Date().toISOString();
                 salvarProdutos(produtos);
 
-                console.log(`✅ Link original / imagem resolvidos automaticamente para o produto #${produto.id} (${produto.titulo.slice(0, 40)}).`);
+                console.log(`Link original / imagem resolvidos automaticamente para o produto #${produto.id} (${produto.titulo.slice(0, 40)}).`);
 
             }
 
         })
         .catch(erro => {
 
-            console.log(`⚠️ Não foi possível resolver automaticamente o produto #${produto.id}: ${erro.message}`);
+            console.log(`Não foi possível resolver automaticamente o produto #${produto.id}: ${erro.message}`);
 
         });
 
 }
 
-// ======================================
-// LISTAR TODOS OS PRODUTOS
-// ======================================
 router.get("/", (req, res) => {
     res.json(listarProdutos());
 });
 
-// ======================================
-// CORRIGIR PRODUTOS SEM DESCONTO REAL: desativa (sem gastar nenhum crédito
-// de IA, é só um filtro nos dados que já temos) todo produto ativo que não
-// tenha um preço antigo maior que o preço atual — ou seja, que não seja
-// uma promoção de verdade. Útil pra corrigir de uma vez produtos que
-// entraram assim antes dessa regra existir.
-// ======================================
+// Desativa (sem gastar crédito de IA, é só um filtro nos dados que já
+// temos) todo produto ativo sem desconto real. Útil pra corrigir de uma
+// vez produtos que entraram assim antes dessa regra existir.
 router.post("/corrigir-sem-desconto", (req, res) => {
 
     try {
@@ -112,16 +102,11 @@ router.post("/corrigir-sem-desconto", (req, res) => {
 
 });
 
-// ======================================
-// RESOLVER EM MASSA: roda a resolução automática (link original + imagem)
-// em todos os produtos do Mercado Livre e Amazon que ainda estão com algum
-// desses campos vazio — útil pra completar produtos antigos, cadastrados
-// antes dessa funcionalidade existir. Mostra o progresso em tempo real
-// (SSE), produto por produto, igual à Verificação de Preços.
-//
-// Aceita opcionalmente { produtoIds: [1, 2] } no corpo, pra testar só em
-// alguns produtos específicos em vez de todos os pendentes de uma vez.
-// ======================================
+// Roda a resolução automática (link original + imagem) em todos os
+// produtos do Mercado Livre e Amazon que ainda estão com algum desses
+// campos vazio, mostrando o progresso em tempo real (SSE). Aceita
+// opcionalmente { produtoIds: [1, 2] } no corpo, pra testar só em alguns
+// produtos específicos em vez de todos os pendentes de uma vez.
 router.post("/resolver-pendentes", async (req, res) => {
 
     res.setHeader("Content-Type", "text/event-stream");
@@ -153,7 +138,7 @@ router.post("/resolver-pendentes", async (req, res) => {
 
     for (const produto of pendentes) {
 
-        console.log(`🔎 Resolvendo #${produto.id} (${produto.marketplace}): ${produto.titulo.slice(0, 50)}`);
+        console.log(`Resolvendo #${produto.id} (${produto.marketplace}): ${produto.titulo.slice(0, 50)}`);
 
         try {
 
@@ -210,9 +195,8 @@ router.post("/resolver-pendentes", async (req, res) => {
 
         }
 
-        // Pequena pausa entre cada resolução, pra reduzir a chance de o
-        // marketplace detectar o volume de acessos automatizados seguidos
-        // e reforçar o bloqueio.
+        // Pausa entre cada resolução, pra reduzir a chance de o marketplace
+        // detectar o volume de acessos automatizados seguidos.
         await new Promise(resolve => setTimeout(resolve, 3000));
 
     }
@@ -223,9 +207,6 @@ router.post("/resolver-pendentes", async (req, res) => {
 
 });
 
-// ======================================
-// BUSCAR UM PRODUTO
-// ======================================
 router.get("/:id", (req, res) => {
     const produto = buscarProduto(req.params.id);
     if (!produto) {
@@ -237,9 +218,6 @@ router.get("/:id", (req, res) => {
     res.json(produto);
 });
 
-// ======================================
-// CADASTRAR PRODUTO
-// ======================================
 router.post("/", (req, res) => {
     try {
 
@@ -261,9 +239,6 @@ router.post("/", (req, res) => {
     }
 });
 
-// ======================================
-// EDITAR PRODUTO
-// ======================================
 router.put("/:id", (req, res) => {
     const produtos = listarProdutos();
     const indice = produtos.findIndex(
@@ -300,9 +275,6 @@ router.put("/:id", (req, res) => {
 
 });
 
-// ======================================
-// ATIVAR / DESATIVAR
-// ======================================
 router.patch("/:id", (req, res) => {
     const produtos = listarProdutos();
     const indice = produtos.findIndex(
@@ -323,9 +295,6 @@ router.patch("/:id", (req, res) => {
     });
 });
 
-// ======================================
-// EXCLUIR PRODUTO
-// ======================================
 router.delete("/:id", (req, res) => {
     const produtos = listarProdutos();
     const indice = produtos.findIndex(
