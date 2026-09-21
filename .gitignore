@@ -14,3 +14,6 @@ npm-debug.log*
 # Arquivos de sistema
 .DS_Store
 Thumbs.db
+
+# Variáveis de ambiente (chaves de API, segredos)
+.env
