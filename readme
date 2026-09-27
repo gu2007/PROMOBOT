@@ -23,7 +23,7 @@ Construído para automatizar a rotina de divulgação de afiliados de ponta a po
 - **Frontend do dashboard**: HTML, CSS e JavaScript puros + Chart.js
 - **Deploy**: Oracle Cloud VPS, gerenciado com PM2
 
-## ⚠️ Avisos importantes antes de começar
+## Avisos importantes antes de começar
 
 - Use um **número de WhatsApp dedicado** para o robô (não seu número pessoal).
   Envio automatizado viola os Termos de Serviço do WhatsApp e o número pode
