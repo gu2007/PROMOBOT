@@ -1,7 +1,8 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 
-﻿const {
-  proximoProduto,
+const {
+  escolherProximoProduto,
+  registrarEnvio,
   totalProdutos,
   totalProdutosAtivos,
   totalCategorias
@@ -32,12 +33,65 @@ const USAR_N8N = true;
 const PORTA_WEB = 3000;
 // ================================
 
+// ======= RESILIÊNCIA =======
+// Tempo máximo para uma mensagem (com ou sem imagem) sair. Passou disso, o
+// envio conta como falha em vez de ficar pendurado para sempre.
+const TEMPO_LIMITE_ENVIO_MS = 90 * 1000;
+// Tempo máximo para baixar a imagem do produto antes de enviar.
+const TEMPO_LIMITE_IMAGEM_MS = 30 * 1000;
+// Quantas falhas de envio seguidas até o robô se reiniciar sozinho.
+const LIMITE_FALHAS_SEGUIDAS = 2;
+// De quanto em quanto tempo o robô testa se o WhatsApp ainda responde.
+const INTERVALO_SAUDE_MS = 10 * 60 * 1000;
+const TEMPO_LIMITE_SAUDE_MS = 45 * 1000;
+// Quantos testes de saúde seguidos podem falhar até o robô se reiniciar.
+const LIMITE_FALHAS_SAUDE = 2;
+// ================================
+
 const CONFIG_PATH = path.join(__dirname, 'config.json');
 
 function carregarConfig() {
   return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
 }
 
+// Avisa o serviço de monitoramento externo (healthchecks.io). Só funciona se
+// HEALTHCHECK_URL estiver no .env; sem ela, não faz nada. Nunca trava o robô.
+//   avisarMonitor('')      -> "estou vivo e enviei uma oferta"
+//   avisarMonitor('/fail') -> "algo deu errado" (dispara o e-mail na hora)
+function avisarMonitor(sufixo) {
+  const url = process.env.HEALTHCHECK_URL;
+  if (!url) return;
+
+  fetch(url + (sufixo || ''), { signal: AbortSignal.timeout(10000) }).catch(() => {});
+}
+
+// Faz uma promessa falhar se demorar mais que "ms" milissegundos.
+function comTimeout(promessa, ms, descricao) {
+  let temporizador;
+
+  const limite = new Promise((_, rejeitar) => {
+    temporizador = setTimeout(
+      () => rejeitar(new Error(`Tempo esgotado (${ms / 1000}s): ${descricao}`)),
+      ms
+    );
+  });
+
+  return Promise.race([promessa, limite]).finally(() => clearTimeout(temporizador));
+}
+
+// Encerra o processo de propósito: o PM2 sobe o robô de novo, com um Chrome
+// novo e limpo. Espera uns segundos para o aviso externo conseguir sair.
+let reiniciando = false;
+
+function reiniciarProcesso(motivo) {
+  if (reiniciando) return;
+  reiniciando = true;
+
+  console.error(`🔁 Reiniciando o robô: ${motivo}`);
+  avisarMonitor('/fail');
+
+  setTimeout(() => process.exit(1), 5000);
+}
 
 // Monta o texto da mensagem a partir de um produto
 function formatarMensagem(produto) {
@@ -61,7 +115,8 @@ function formatarMensagem(produto) {
 
   return mensagem;}
 
-// Envia um produto para o grupo, com imagem (se tiver) + texto
+// Envia um produto para o grupo, com imagem (se tiver) + texto.
+// Se a mensagem não sair, lança um erro (quem chamou decide o que fazer).
 async function enviarProduto(client, produto) {
 
   console.log(produto);
@@ -70,8 +125,18 @@ async function enviarProduto(client, produto) {
 
   if (produto.imagem) {
     try {
-      const media = await MessageMedia.fromUrl(produto.imagem, { unsafeMime: true });
-      await client.sendMessage(GROUP_ID, media, { caption: texto });
+      const media = await comTimeout(
+        MessageMedia.fromUrl(produto.imagem, { unsafeMime: true }),
+        TEMPO_LIMITE_IMAGEM_MS,
+        'baixar a imagem do produto'
+      );
+
+      await comTimeout(
+        client.sendMessage(GROUP_ID, media, { caption: texto }),
+        TEMPO_LIMITE_ENVIO_MS,
+        'enviar mensagem com imagem'
+      );
+
       return;
     } catch (err) {
       console.error('⚠️ Não consegui carregar a imagem, enviando só o texto:', err.message);
@@ -81,23 +146,136 @@ async function enviarProduto(client, produto) {
   // Sem imagem ou erro ao carregar -> envia só o texto
   // (linkPreview: true força a tentativa de gerar o preview automático do
   // link, que às vezes falha silenciosamente na biblioteca do WhatsApp)
-  await client.sendMessage(GROUP_ID, texto, { linkPreview: true });
+  await comTimeout(
+    client.sendMessage(GROUP_ID, texto, { linkPreview: true }),
+    TEMPO_LIMITE_ENVIO_MS,
+    'enviar mensagem de texto'
+  );
+}
+
+// ---- Fila de envios ----
+// Os envios saem um de cada vez, nunca dois ao mesmo tempo. Isso poupa o
+// Chrome (que já é pesado para o servidor) e evita que dois envios escolham
+// o mesmo produto.
+let filaEnvios = Promise.resolve();
+
+function enfileirar(tarefa) {
+  const resultado = filaEnvios.then(tarefa);
+  filaEnvios = resultado.catch(() => {});
+  return resultado;
+}
+
+// Escolhe o próximo produto, envia, e SÓ DEPOIS marca como enviado. Se o
+// envio falhar, o produto não é "queimado": continua disponível.
+// Retorna o produto enviado, ou null se não havia produto disponível.
+async function enviarProximaOferta() {
+
+  const produto = escolherProximoProduto();
+
+  if (!produto) return null;
+
+  await enviarProduto(client, produto);
+
+  try {
+    registrarEnvio(produto.id);
+  } catch (erro) {
+    console.error('⚠️ A mensagem foi enviada, mas não consegui registrar o envio no products.json:', erro.message);
+  }
+
+  return produto;
+}
+
+let falhasSeguidas = 0;
+
+// Tarefa usada pelo agendamento automático.
+async function envioAgendado() {
+
+  try {
+
+    const produto = await enviarProximaOferta();
+
+    if (!produto) {
+      console.log("⚠️ Nenhum produto disponível para envio (sem produtos ativos ou todos em cooldown).");
+      return;
+    }
+
+    falhasSeguidas = 0;
+    console.log(`✅ Oferta enviada: ${produto.titulo}`);
+    avisarMonitor('');
+
+  } catch (err) {
+
+    falhasSeguidas++;
+    console.error(`❌ Falha no envio (${falhasSeguidas} seguida(s)):`, err.message || err);
+    avisarMonitor('/fail');
+
+    if (falhasSeguidas >= LIMITE_FALHAS_SEGUIDAS) {
+      reiniciarProcesso(`${falhasSeguidas} envios seguidos falharam`);
+    }
+
+  }
+}
+
+// ---- Teste de saúde periódico ----
+// Pergunta ao WhatsApp em que estado ele está. Se o Chrome travou (não
+// responde) ou o WhatsApp não está conectado por duas vezes seguidas, o robô
+// se reinicia — mesmo fora do horário de envio, antes de alguém precisar dele.
+let falhasSaude = 0;
+
+async function verificarSaude() {
+
+  try {
+
+    const estado = await comTimeout(client.getState(), TEMPO_LIMITE_SAUDE_MS, 'consultar o estado do WhatsApp');
+
+    if (estado !== 'CONNECTED') {
+      throw new Error(`estado do WhatsApp: ${estado}`);
+    }
+
+    falhasSaude = 0;
+
+  } catch (err) {
+
+    falhasSaude++;
+    console.error(`⚠️ Teste de saúde falhou (${falhasSaude}/${LIMITE_FALHAS_SAUDE}):`, err.message);
+
+    if (falhasSaude >= LIMITE_FALHAS_SAUDE) {
+      reiniciarProcesso('o WhatsApp não está respondendo');
+    }
+
+  }
 }
 
 const client = new Client({
   authStrategy: new LocalAuth(), // guarda a sessão localmente, não precisa escanear QR toda vez
   puppeteer: {
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+    ],
   },
   webVersionCache: {
     type: 'local', // usa a versão que autenticou com sucesso; se não tiver cache, busca a mais recente do próprio WhatsApp
   },
 });
 
+let qrAvisado = false;
+
 client.on('qr', (qr) => {
   console.log('📱 Escaneie o QR Code abaixo com o WhatsApp do robô:');
   qrcode.generate(qr, { small: true });
+
+  // Pedir QR significa que o WhatsApp desvinculou o robô: só uma pessoa
+  // consegue resolver, então avisa uma vez.
+  if (!qrAvisado) {
+    qrAvisado = true;
+    avisarMonitor('/fail');
+  }
 });
 
 // ---- Agendamento automático baseado em config.json ----
@@ -141,29 +319,27 @@ function agendarEnviosDaHora(client) {
     const minutoAleatorio = minutoBase + Math.floor(Math.random() * faixaMin);
     const delayMs = minutoAleatorio * 60 * 1000;
 
-    const timeout = setTimeout(async () => {
+    const timeout = setTimeout(() => {
+      enfileirar(envioAgendado);
+    }, delayMs);
 
-    const produto = proximoProduto();
-
-    if (!produto) {
-        console.log("⚠️ Nenhum produto disponível para envio (sem produtos ativos ou todos em cooldown).");
-        return;
-    }
-
-    try {
-        await enviarProduto(client, produto);
-        console.log(`✅ Oferta enviada: ${produto.titulo}`);
-    } catch (err) {
-        console.error(err);
-    }
-
-}, delayMs);
-
-scheduler.adicionar(timeout);
+    scheduler.adicionar(timeout);
   }
 }
 
+// O evento "ready" pode disparar mais de uma vez (o WhatsApp Web às vezes
+// recarrega sozinho). Tudo abaixo só deve ser montado uma vez.
+let jaInicializado = false;
+
 client.on('ready', () => {
+
+  if (jaInicializado) {
+    console.log('ℹ️ Evento "ready" repetido ignorado (o robô já está inicializado).');
+    return;
+  }
+
+  jaInicializado = true;
+
   console.log('✅ Robô conectado e pronto!');
 
   const config = carregarConfig();
@@ -227,6 +403,9 @@ fs.watch(CONFIG_PATH, { persistent: true }, () => {
 
   // E depois, a cada hora cheia (minuto 0), decide os envios daquela hora
   cron.schedule('0 * * * *', () => agendarEnviosDaHora(client));
+
+  // Teste de saúde periódico (o robô se reinicia sozinho se o WhatsApp travar)
+  setInterval(verificarSaude, INTERVALO_SAUDE_MS);
 
   // Verificação semanal de preço/disponibilidade dos produtos ativos
   // (domingo às 3h da manhã, fora do horário normal de envios)
@@ -334,20 +513,24 @@ app.get('/alteracoes', (req, res) => {
 
     app.post('/send', async (req, res) => {
       try {
-        let texto = req.body?.mensagem;
-        let produto = null;
+        const texto = req.body?.mensagem;
 
-        if (!texto) {
-          produto = proximoProduto();
+        if (texto) {
+
+          await enfileirar(() => comTimeout(
+            client.sendMessage(GROUP_ID, texto),
+            TEMPO_LIMITE_ENVIO_MS,
+            'enviar mensagem avulsa'
+          ));
+
+        } else {
+
+          const produto = await enfileirar(enviarProximaOferta);
+
           if (!produto) {
             return res.status(400).json({ ok: false, erro: 'Nenhum produto disponível' });
           }
-        }
 
-        if (produto) {
-          await enviarProduto(client, produto);
-        } else {
-          await client.sendMessage(GROUP_ID, texto);
         }
 
         console.log('✅ Mensagem enviada via n8n/API');
@@ -374,6 +557,12 @@ servidor.on("error", (erro) => {
 
 client.on('disconnected', (reason) => {
   console.log('Cliente desconectado:', reason);
+  reiniciarProcesso(`WhatsApp desconectado (${reason})`);
+});
+
+client.on('auth_failure', (mensagem) => {
+  console.error('❌ Falha de autenticação do WhatsApp:', mensagem);
+  reiniciarProcesso('falha de autenticação do WhatsApp');
 });
 
 client.initialize();

@@ -1,4 +1,4 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const path = require('path');
 
 const CONFIG_PATH = path.join(__dirname, 'config.json');
@@ -52,7 +52,7 @@ function normalizarTitulo(titulo) {
     return (titulo || '')
         .toString()
         .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '')
+        .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
         .replace(/[^a-z0-9\s]/g, ' ')
         .replace(/\s+/g, ' ')
@@ -155,11 +155,19 @@ function carregarProdutos() {
     );
 }
 
+// Grava num arquivo temporário e só depois troca pelo products.json. Se o
+// processo for interrompido no meio da gravação (falta de memória, queda de
+// energia, restart), o products.json antigo continua inteiro em vez de ficar
+// cortado pela metade.
 function salvarProdutos(produtos) {
+    const temporario = PRODUCTS_PATH + '.tmp';
+
     fs.writeFileSync(
-        PRODUCTS_PATH,
+        temporario,
         JSON.stringify(produtos, null, 2)
     );
+
+    fs.renameSync(temporario, PRODUCTS_PATH);
 }
 
 function listarProdutos() {
@@ -271,7 +279,13 @@ function embaralhar(lista) {
     return lista;
 }
 
-function proximoProduto() {
+// Escolhe o próximo produto a ser enviado SEM marcá-lo como enviado. Quem
+// chama deve chamar registrarEnvio(id) só depois que a mensagem realmente
+// sair, para que um envio que falhou não "queime" o produto.
+// idsExcluidos (opcional): ids que não podem ser escolhidos agora.
+function escolherProximoProduto(idsExcluidos) {
+
+    const excluidos = new Set(idsExcluidos || []);
 
     let intervaloHoras = 24;
 
@@ -285,6 +299,7 @@ function proximoProduto() {
     const agora = Date.now();
 
     const produtos = listarProdutosAtivos().filter(p => {
+        if (excluidos.has(p.id)) return false;
         if (!p.ultimaDivulgacao) return true;
         const horasDesdeEnvio = (agora - new Date(p.ultimaDivulgacao).getTime()) / (1000 * 60 * 60);
         return horasDesdeEnvio >= intervaloHoras;
@@ -302,18 +317,39 @@ function proximoProduto() {
 
     embaralhar(candidatos);
 
-    const escolhido = candidatos[0];
+    return candidatos[0];
+
+}
+
+// Marca um produto como enviado agora (soma 1 em "enviado" e atualiza a data
+// da última divulgação). Retorna o produto atualizado, ou null se não existir.
+function registrarEnvio(id) {
 
     const todos = carregarProdutos();
 
-    const produtoReal = todos.find(p => p.id === escolhido.id);
+    const produtoReal = todos.find(p => p.id === Number(id));
 
-    produtoReal.enviado++;
+    if (!produtoReal) return null;
+
+    produtoReal.enviado = (produtoReal.enviado || 0) + 1;
     produtoReal.ultimaDivulgacao = new Date().toISOString();
 
     salvarProdutos(todos);
 
     return produtoReal;
+
+}
+
+// Mantida para compatibilidade: escolhe e já marca como enviado, no mesmo
+// passo (comportamento antigo). O envio automático do robô usa
+// escolherProximoProduto + registrarEnvio, que só marca após o envio dar certo.
+function proximoProduto() {
+
+    const escolhido = escolherProximoProduto();
+
+    if (!escolhido) return null;
+
+    return registrarEnvio(escolhido.id);
 
 }
 
@@ -425,6 +461,8 @@ module.exports = {
 
     produtoSemDescontoReal,
 
+    escolherProximoProduto,
+    registrarEnvio,
     proximoProduto,
 
     aplicarResultadoVerificacao,
