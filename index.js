@@ -1,5 +1,8 @@
 ﻿require('dotenv').config();
 
+// Correção temporária do envio de imagem (ver o arquivo). Tem que rodar ANTES de iniciar o WhatsApp.
+require('./corrigir-whatsapp-web');
+
 const {
   escolherProximoProduto,
   registrarEnvio,
