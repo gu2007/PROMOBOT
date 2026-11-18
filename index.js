@@ -39,6 +39,12 @@ const PORTA_WEB = 3000;
 const TEMPO_LIMITE_ENVIO_MS = 90 * 1000;
 // Tempo máximo para baixar a imagem do produto antes de enviar.
 const TEMPO_LIMITE_IMAGEM_MS = 30 * 1000;
+// Quantas vezes tentar baixar / enviar a imagem antes de desistir dela.
+const TENTATIVAS_IMAGEM = 3;
+const PAUSA_ENTRE_TENTATIVAS_MS = 4 * 1000;
+// Quantas ofertas seguidas podem sair SEM imagem até o robô se reiniciar
+// (reiniciar dá um Chrome novo, que costuma voltar a enviar as fotos).
+const LIMITE_SEM_IMAGEM_SEGUIDAS = 2;
 // Quantas falhas de envio seguidas até o robô se reiniciar sozinho.
 const LIMITE_FALHAS_SEGUIDAS = 2;
 // De quanto em quanto tempo o robô testa se o WhatsApp ainda responde.
@@ -115,37 +121,70 @@ function formatarMensagem(produto) {
 
   return mensagem;}
 
+// Espera simples (usada entre uma tentativa e outra).
+function esperar(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Tenta uma ação até "tentativas" vezes. Se todas falharem, lança o último erro.
+async function tentarVarias(descricao, acao) {
+  let ultimoErro;
+
+  for (let i = 1; i <= TENTATIVAS_IMAGEM; i++) {
+    try {
+      return await acao();
+    } catch (err) {
+      ultimoErro = err;
+      console.error(`⚠️ ${descricao} falhou (tentativa ${i}/${TENTATIVAS_IMAGEM}):`, err.message);
+      if (i < TENTATIVAS_IMAGEM) await esperar(PAUSA_ENTRE_TENTATIVAS_MS);
+    }
+  }
+
+  throw ultimoErro;
+}
+
+// Diz se a última oferta enviada saiu sem a imagem do produto.
+let ultimoEnvioSemImagem = false;
+
 // Envia um produto para o grupo, com imagem (se tiver) + texto.
-// Se a mensagem não sair, lança um erro (quem chamou decide o que fazer).
+// A imagem é tentada várias vezes antes de desistir. Só se todas falharem,
+// manda o texto sozinho (melhor um aviso sem foto do que o grupo ficar mudo).
+// Se a mensagem não sair de jeito nenhum, lança um erro.
 async function enviarProduto(client, produto) {
 
   console.log(produto);
 
   const texto = formatarMensagem(produto);
 
+  ultimoEnvioSemImagem = false;
+
   if (produto.imagem) {
     try {
-      const media = await comTimeout(
-        MessageMedia.fromUrl(produto.imagem, { unsafeMime: true }),
-        TEMPO_LIMITE_IMAGEM_MS,
-        'baixar a imagem do produto'
+      const media = await tentarVarias('Baixar a imagem', () =>
+        comTimeout(
+          MessageMedia.fromUrl(produto.imagem, { unsafeMime: true }),
+          TEMPO_LIMITE_IMAGEM_MS,
+          'baixar a imagem do produto'
+        )
       );
 
-      await comTimeout(
-        client.sendMessage(GROUP_ID, media, { caption: texto }),
-        TEMPO_LIMITE_ENVIO_MS,
-        'enviar mensagem com imagem'
+      await tentarVarias('Enviar a mensagem com imagem', () =>
+        comTimeout(
+          client.sendMessage(GROUP_ID, media, { caption: texto }),
+          TEMPO_LIMITE_ENVIO_MS,
+          'enviar mensagem com imagem'
+        )
       );
 
       return;
     } catch (err) {
-      console.error('⚠️ Não consegui carregar a imagem, enviando só o texto:', err.message);
+      console.error(`⚠️ SEM IMAGEM (produto ${produto.id}, ${produto.marketplace}), enviando só o texto:`, err.message);
     }
   }
 
+  ultimoEnvioSemImagem = true;
+
   // Sem imagem ou erro ao carregar -> envia só o texto
-  // (linkPreview: true força a tentativa de gerar o preview automático do
-  // link, que às vezes falha silenciosamente na biblioteca do WhatsApp)
   await comTimeout(
     client.sendMessage(GROUP_ID, texto, { linkPreview: true }),
     TEMPO_LIMITE_ENVIO_MS,
@@ -186,6 +225,7 @@ async function enviarProximaOferta() {
 }
 
 let falhasSeguidas = 0;
+let semImagemSeguidas = 0;
 
 // Tarefa usada pelo agendamento automático.
 async function envioAgendado() {
@@ -200,8 +240,17 @@ async function envioAgendado() {
     }
 
     falhasSeguidas = 0;
-    console.log(`✅ Oferta enviada: ${produto.titulo}`);
+    console.log(`✅ Oferta enviada${ultimoEnvioSemImagem ? ' (SEM IMAGEM)' : ''}: ${produto.titulo}`);
     avisarMonitor('');
+
+    if (ultimoEnvioSemImagem) {
+      semImagemSeguidas++;
+      if (semImagemSeguidas >= LIMITE_SEM_IMAGEM_SEGUIDAS) {
+        reiniciarProcesso(`${semImagemSeguidas} ofertas seguidas sem imagem`);
+      }
+    } else {
+      semImagemSeguidas = 0;
+    }
 
   } catch (err) {
 
