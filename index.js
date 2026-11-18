@@ -146,6 +146,35 @@ async function tentarVarias(descricao, acao) {
   throw ultimoErro;
 }
 
+// Pergunta ao WhatsApp se o link do produto gera uma prévia COM imagem
+// (a imagem grande que aparece em cima do link, clicável até o produto).
+// Amazon e Mercado Livre às vezes não entregam a imagem na hora, por isso
+// quem chama tenta algumas vezes antes de desistir.
+async function previaTemImagem(client, link) {
+  try {
+    const r = await comTimeout(
+      client.pupPage.evaluate(async (url) => {
+        const p = await window
+          .require('WAWebLinkPreviewChatAction')
+          .getLinkPreview(url);
+        const d = p && p.data;
+        if (!d) return { ok: false, titulo: '', campos: [] };
+        const campos = Object.keys(d);
+        const ok = campos.some((k) => /thumbnail/i.test(k) && d[k]);
+        return { ok, titulo: String(d.title || ''), campos };
+      }, link),
+      30 * 1000,
+      'checar a prévia do link'
+    );
+
+    console.log(`🔎 Prévia do link: ${r.ok ? 'COM imagem' : 'SEM imagem'} (título: "${r.titulo}")`);
+    return r.ok;
+  } catch (err) {
+    console.error('⚠️ Não consegui checar a prévia do link:', err.message);
+    return false;
+  }
+}
+
 // Diz se a última oferta enviada saiu sem a imagem do produto.
 let ultimoEnvioSemImagem = false;
 
@@ -161,6 +190,33 @@ async function enviarProduto(client, produto) {
 
   ultimoEnvioSemImagem = false;
 
+  // 1ª opção: o link com a prévia automática do WhatsApp (imagem clicável
+  // que leva direto ao produto). Só usa se a prévia realmente tiver imagem.
+  if (produto.linkAfiliado) {
+    let previaOk = false;
+
+    for (let i = 1; i <= 3 && !previaOk; i++) {
+      previaOk = await previaTemImagem(client, produto.linkAfiliado);
+      if (!previaOk && i < 3) await esperar(5000);
+    }
+
+    if (previaOk) {
+      try {
+        await comTimeout(
+          client.sendMessage(GROUP_ID, texto, { linkPreview: true }),
+          TEMPO_LIMITE_ENVIO_MS,
+          'enviar mensagem com prévia do link'
+        );
+        return;
+      } catch (err) {
+        console.error('⚠️ Falha ao enviar com a prévia do link, tentando com a foto:', err.message);
+      }
+    } else {
+      console.error(`⚠️ A prévia do link ficou sem imagem (produto ${produto.id}, ${produto.marketplace}), enviando com a foto do produto.`);
+    }
+  }
+
+  // 2ª opção: a foto do produto com o texto embaixo.
   if (produto.imagem) {
     try {
       const media = await tentarVarias('Baixar a imagem', () =>
