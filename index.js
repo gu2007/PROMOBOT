@@ -102,27 +102,89 @@ function reiniciarProcesso(motivo) {
   setTimeout(() => process.exit(1), 5000);
 }
 
+// ---- Texto da mensagem ----
+
+// 30.9 -> "30,90"  |  1299 -> "1.299,00"
+function formatarPreco(valor) {
+  const n = Number(valor);
+  if (!isFinite(n)) return String(valor);
+  const [inteiro, centavos] = n.toFixed(2).split('.');
+  return `${inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${centavos}`;
+}
+
+const TAMANHO_MAX_TITULO = 55;
+
+// Deixa só o nome que identifica o produto: corta no primeiro separador
+// (vírgula seguida de espaço, " - ", " | ", ";") e tira o que vem entre
+// parênteses. Se o produto tiver o campo "tituloCurto", usa ele direto.
+function tituloCurto(produto) {
+  if (produto.tituloCurto && String(produto.tituloCurto).trim()) {
+    return String(produto.tituloCurto).trim();
+  }
+
+  const original = String(produto.titulo || '').replace(/\s+/g, ' ').trim();
+
+  let t = original.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+  t = t.split(/\s[-–—|]\s|,\s|;\s/)[0].trim();
+
+  if (t.length > TAMANHO_MAX_TITULO) {
+    t = t.slice(0, TAMANHO_MAX_TITULO).replace(/\s+\S*$/, '');
+  }
+
+  // não termina em palavra solta ("de", "com", "para"...)
+  t = t.replace(/(\s+(de|da|do|das|dos|com|para|e|em|c\/|p\/|\+|-))+$/i, '').trim();
+
+  return t || original.slice(0, TAMANHO_MAX_TITULO);
+}
+
+// Texto de venda curto: a 1ª frase (e a 2ª, se ainda ficar curto).
+function fraseDeVenda(texto) {
+  const t = String(texto || '').replace(/\s+/g, ' ').trim();
+  if (!t) return '';
+
+  const frases = t.match(/[^.!?]+[.!?]+/g) || [t];
+  let saida = frases[0].trim();
+
+  if (frases[1] && (saida + ' ' + frases[1].trim()).length <= 120) {
+    saida += ' ' + frases[1].trim();
+  }
+
+  if (saida.length > 140) {
+    saida = saida.slice(0, 137).replace(/\s+\S*$/, '') + '...';
+  }
+
+  return saida;
+}
+
 // Monta o texto da mensagem a partir de um produto
 function formatarMensagem(produto) {
 
+  const percentual = Number(produto.desconto) > 0
+    ? `  🏷️ ${Math.round(Number(produto.desconto))}% OFF`
+    : '';
+
   const precoTexto = produto.precoAntigo
-    ? `~R$ ${produto.precoAntigo}~ ➡️ *R$ ${produto.preco}*`
-    : `*R$ ${produto.preco}*`;
+    ? `~R$ ${formatarPreco(produto.precoAntigo)}~ ➡️ *R$ ${formatarPreco(produto.preco)}*${percentual}`
+    : `*R$ ${formatarPreco(produto.preco)}*`;
+
+  const venda = fraseDeVenda(produto.texto);
 
   let mensagem =
     `🔥 *OFERTA* 🔥\n\n` +
-    `${produto.titulo}\n\n` +
+    `*${tituloCurto(produto)}*\n\n` +
     `💰 ${precoTexto}\n\n`;
 
-  if (produto.texto && produto.texto.trim() !== '') {
-    mensagem += `${produto.texto}\n\n`;
+  if (venda) {
+    mensagem += `${venda}\n\n`;
   }
 
   mensagem +=
-    `👉 ${produto.linkAfiliado}\n\n` +
+    `👇 *CLIQUE NO LINK ABAIXO E GARANTA O SEU* 👇\n` +
+    `${produto.linkAfiliado}\n\n` +
     `_Preços podem mudar_`;
 
-  return mensagem;}
+  return mensagem;
+}
 
 // Espera simples (usada entre uma tentativa e outra).
 function esperar(ms) {
