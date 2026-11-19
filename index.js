@@ -156,30 +156,60 @@ function fraseDeVenda(texto) {
   return saida;
 }
 
+// Frases de abertura, de acordo com o tamanho do desconto. Quanto maior o
+// desconto, mais chamativa a frase. Sorteia uma por mensagem (sem repetir
+// a mesma duas vezes seguidas).
+const ABERTURAS = {
+  normal: [          // até 29% (ou sem desconto informado)
+    '🔥 *OFERTA* 🔥',
+    '👀 *OLHA ESSA OFERTA* 👀',
+    '✅ *BOA OFERTA* ✅',
+  ],
+  forte: [           // 30% a 49%
+    '😱 *SE LIGA NESSA!* 😱',
+    '🚨 *PROMOÇÃO NA ESPERA* 🚨',
+    '🔥🔥 *OFERTÃO* 🔥🔥',
+  ],
+  absurdo: [         // 50% ou mais
+    '🚨🚨 *DESCONTÃO! CORRE!* 🚨🚨',
+    '🤯 *PREÇO ABSURDO!* 🤯',
+    '💥 *METADE DO PREÇO (OU MENOS)!* 💥',
+  ],
+};
+
+let ultimaAbertura = '';
+
+function escolherAbertura(desconto) {
+  const d = Number(desconto) || 0;
+  const grupo = d >= 50 ? ABERTURAS.absurdo : d >= 30 ? ABERTURAS.forte : ABERTURAS.normal;
+
+  const opcoes = grupo.filter((a) => a !== ultimaAbertura);
+  const escolhida = opcoes[Math.floor(Math.random() * opcoes.length)];
+
+  ultimaAbertura = escolhida;
+  return escolhida;
+}
+
 // Monta o texto da mensagem a partir de um produto
 function formatarMensagem(produto) {
 
-  const percentual = Number(produto.desconto) > 0
-    ? `  🏷️ ${Math.round(Number(produto.desconto))}% OFF`
-    : '';
-
   const precoTexto = produto.precoAntigo
-    ? `~R$ ${formatarPreco(produto.precoAntigo)}~ ➡️ *R$ ${formatarPreco(produto.preco)}*${percentual}`
-    : `*R$ ${formatarPreco(produto.preco)}*`;
+    ? `De: ~R$ ${formatarPreco(produto.precoAntigo)}~ ➡️ *R$ ${formatarPreco(produto.preco)}*`
+    : `Por apenas: *R$ ${formatarPreco(produto.preco)}*`;
 
   const venda = fraseDeVenda(produto.texto);
 
   let mensagem =
-    `🔥 *OFERTA* 🔥\n\n` +
+    `${escolherAbertura(produto.desconto)}\n\n` +
     `*${tituloCurto(produto)}*\n\n` +
-    `💰 ${precoTexto}\n\n`;
+    `${precoTexto}\n\n`;
 
   if (venda) {
     mensagem += `${venda}\n\n`;
   }
 
   mensagem +=
-    `👇 *CLIQUE NO LINK ABAIXO E GARANTA O SEU* 👇\n` +
+    `👇 *LINK DO PRODUTO* 👇\n` +
     `${produto.linkAfiliado}\n\n` +
     `_Preços podem mudar_`;
 
