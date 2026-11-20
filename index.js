@@ -780,3 +780,14 @@ if (process.argv[2] === 'listar-grupos') {
     process.exit(0);
   });
 }
+
+// ---- Gatilho manual do convite de TESTE ----
+// Se existir o arquivo "convite-teste-agora" na pasta do robô, ele manda o
+// convite de teste (só para conviteNumeroTeste) e apaga o arquivo.
+// Nunca manda para o grupo.
+setInterval(() => {
+  const gatilho = path.join(__dirname, 'convite-teste-agora');
+  if (!fs.existsSync(gatilho)) return;
+  try { fs.unlinkSync(gatilho); } catch (_) { return; }
+  enfileirar(() => convite.testeAgora(client, GROUP_ID, carregarConfig(), comTimeout));
+}, 15 * 1000);

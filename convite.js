@@ -87,4 +87,14 @@ async function aposOferta(client, groupId, config, comTimeout) {
   }
 }
 
-module.exports = { aposOferta, formatarConvite };
+// Manda o convite de TESTE agora (só para o número de teste), sem mexer no contador.
+async function testeAgora(client, groupId, config, comTimeout) {
+  try {
+    await comTimeout(enviar(client, groupId, config, 'teste'), 90 * 1000, 'enviar convite de teste');
+    console.log('🧪 Convite de teste enviado para o número de teste.');
+  } catch (erro) {
+    console.error('⚠️ Não consegui enviar o convite de teste:', erro.message || erro);
+  }
+}
+
+module.exports = { aposOferta, testeAgora, formatarConvite };
