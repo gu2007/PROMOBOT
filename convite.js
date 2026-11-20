@@ -13,6 +13,9 @@
 //        o robô tenta descobrir sozinho — só funciona se ele for admin)
 const fs = require('fs');
 const path = require('path');
+const { MessageMedia } = require('whatsapp-web.js');
+
+const IMAGEM = path.join(__dirname, 'convite.jpg');
 
 const ARQUIVO = path.join(__dirname, 'convite.json');
 
@@ -46,12 +49,26 @@ async function descobrirLink(client, groupId, config) {
   return `https://chat.whatsapp.com/${codigo}`;
 }
 
+// Envia como foto com legenda (logo + texto + link). Se a foto falhar, vai só o texto.
+async function mandar(client, chatId, texto) {
+  if (fs.existsSync(IMAGEM)) {
+    try {
+      const media = MessageMedia.fromFilePath(IMAGEM);
+      await client.sendMessage(chatId, media, { caption: texto });
+      return;
+    } catch (erro) {
+      console.error('⚠️ Convite com imagem falhou, enviando só o texto:', erro.message || erro);
+    }
+  }
+  await client.sendMessage(chatId, texto, { linkPreview: true });
+}
+
 async function enviar(client, groupId, config, destino) {
   const link = await descobrirLink(client, groupId, config);
   const texto = formatarConvite(link);
 
   if (destino === 'grupo') {
-    await client.sendMessage(groupId, texto, { linkPreview: true });
+    await mandar(client, groupId, texto);
     return;
   }
 
@@ -59,7 +76,7 @@ async function enviar(client, groupId, config, destino) {
   if (!digitos) throw new Error('conviteNumeroTeste não preenchido no config.json');
   const id = await client.getNumberId(digitos);
   if (!id) throw new Error('número de teste não encontrado no WhatsApp: ' + digitos);
-  await client.sendMessage(id._serialized, '🧪 *TESTE DO CONVITE* (só você recebeu)\n\n' + texto, { linkPreview: true });
+  await mandar(client, id._serialized, '🧪 *TESTE DO CONVITE* (só você recebeu)\n\n' + texto);
 }
 
 // Chamar depois de CADA oferta enviada com sucesso. Nunca lança erro.
