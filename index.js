@@ -25,6 +25,7 @@ const iaRoute = require('./routes/ia');
 const { router: verificacaoRoute, rodarVerificacaoSemanal } = require('./routes/verificacao');
 const session = require('express-session');
 const scheduler = require('./scheduler');
+const convite = require('./convite');
 
 // ======= CONFIGURAÇÕES =======
 // Cole aqui o ID do grupo. Para descobrir o ID, rode: npm run listar-grupos
@@ -393,6 +394,8 @@ async function envioAgendado() {
     falhasSeguidas = 0;
     console.log(`✅ Oferta enviada${ultimoEnvioSemImagem ? ' (SEM IMAGEM)' : ''}: ${produto.titulo}`);
     avisarMonitor('');
+
+    await convite.aposOferta(client, GROUP_ID, carregarConfig(), comTimeout);
 
     if (ultimoEnvioSemImagem) {
       semImagemSeguidas++;

@@ -17,3 +17,6 @@ Thumbs.db
 
 # Variáveis de ambiente (chaves de API, segredos)
 .env
+
+convite.json
+convite.json.tmp
