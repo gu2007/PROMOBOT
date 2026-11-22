@@ -147,6 +147,7 @@ async function lerBusca(page) {
       const a = [...c.querySelectorAll('a[href]')].find((x) =>
         /MLB-?U?\d+/i.test(x.href) && !/click1\.|publicidade\./.test(x.href));
       if (!a) return null; // anúncio patrocinado: ignora
+      if (/\bInternacional\b/.test(c.innerText)) return null; // produto do exterior (China etc.): ignora
       const url = a.href.split('#')[0].split('?')[0];
       const titulo = (c.querySelector('.poly-component__title') || {}).innerText || '';
       const atual = dinheiro(c.querySelector('.poly-price__current'));
