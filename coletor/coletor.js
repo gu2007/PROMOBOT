@@ -32,8 +32,8 @@ const CONFIG = {
   janelaInicio: 8,          // só trabalha entre estas horas (modo --continuo)
   janelaFim: 22,
   intervaloRodadaMin: [60, 120], // minutos de descanso entre rodadas (sorteado)
-  pausaMinMs: 6000,         // pausa entre ações (ritmo humano)
-  pausaMaxMs: 14000,
+  pausaMinMs: 4000,         // pausa entre ações (ritmo humano)
+  pausaMaxMs: 9000,
 };
 const SERVIDOR = {
   host: 'ubuntu@163.176.135.189',

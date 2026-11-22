@@ -30,3 +30,7 @@ coletor-processados/
 coletor/products-servidor.json
 coletor/estado.json
 coletor/lotes/
+
+revisao-entrada/
+revisao-processados/
+coletor/lotes-revisao/

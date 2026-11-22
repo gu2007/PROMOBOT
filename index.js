@@ -27,6 +27,7 @@ const session = require('express-session');
 const scheduler = require('./scheduler');
 const convite = require('./convite');
 const { importarColetor } = require('./importador-coletor');
+const { aplicarRevisoes } = require('./revisor-aplicar');
 
 // ======= CONFIGURAÇÕES =======
 // Cole aqui o ID do grupo. Para descobrir o ID, rode: npm run listar-grupos
@@ -805,3 +806,17 @@ function rodarImportacaoColetor() {
 }
 setTimeout(rodarImportacaoColetor, 20 * 1000);
 setInterval(rodarImportacaoColetor, 5 * 60 * 1000);
+
+// ---- Aplicação da revisão de produtos ----
+// A cada 5 minutos olha a pasta "revisao-entrada" e aplica o que o revisor
+// (robô do PC) leu nas páginas: corrige preço, desativa/reativa produtos.
+// Veja revisor-aplicar.js.
+function rodarRevisaoProdutos() {
+  try {
+    aplicarRevisoes();
+  } catch (erro) {
+    console.error('⚠️ Aplicação da revisão falhou:', erro.message || erro);
+  }
+}
+setTimeout(rodarRevisaoProdutos, 40 * 1000);
+setInterval(rodarRevisaoProdutos, 5 * 60 * 1000);
