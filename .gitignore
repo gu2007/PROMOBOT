@@ -27,3 +27,6 @@ coletor/resultado.json
 coletor/perfil-chrome-real/
 coletor-entrada/
 coletor-processados/
+coletor/products-servidor.json
+coletor/estado.json
+coletor/lotes/

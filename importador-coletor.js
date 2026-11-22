@@ -1,8 +1,13 @@
 // ======= IMPORTADOR DO COLETOR (roda no servidor) =======
 // Olha a pasta "coletor-entrada". Cada arquivo .json que o coletor deixar ali
-// (a lista de produtos com link de afiliado) vira produto cadastrado no
-// sistema, SEMPRE INATIVO: nada vai para o grupo até você aprovar no painel
-// (ative o produto na aba Produtos; procure a categoria "Coletor - revisar").
+// (a lista de produtos com link de afiliado) vira produto cadastrado no sistema.
+//
+// Controlado pelo config.json:
+//   "coletorAutoAtivar": true   -> produtos BONS entram ATIVOS (vão para o grupo)
+//                          false -> todos entram INATIVOS, para você aprovar
+//   "coletorDescontoMin": 30    -> desconto mínimo (%) para ativar sozinho
+// Mesmo ligado, entram INATIVOS (categoria "Coletor - revisar") os produtos sem
+// imagem, com nota baixa, com título suspeito, ou que o sistema ache repetidos.
 // Depois de lido, o arquivo vai para "coletor-processados".
 const fs = require('fs');
 const path = require('path');
@@ -13,6 +18,17 @@ const PROCESSADOS = path.join(__dirname, 'coletor-processados');
 const ESPERA_ARQUIVO_NOVO_MS = 15 * 1000;   // evita ler arquivo ainda sendo copiado
 const LIMITE_ARQUIVO_QUEBRADO_MS = 3 * 60 * 1000;
 
+function lerConfig() {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8').replace(/^\uFEFF/, ''));
+  } catch (_) {
+    return {};
+  }
+}
+
+// Palavras que indicam que o produto não é o que queremos divulgar.
+const TITULO_SUSPEITO = /\b(brinquedo|miniatura|infantil|usad[oa]|defeito|sucata)\b/i;
+
 const idML = (u) => (String(u || '').match(/MLB-?U?\d+/i) || [''])[0].replace('-', '').toUpperCase();
 
 function importarColetor() {
@@ -20,7 +36,10 @@ function importarColetor() {
   fs.mkdirSync(PROCESSADOS, { recursive: true });
 
   const arquivos = fs.readdirSync(ENTRADA).filter((f) => f.toLowerCase().endsWith('.json'));
-  const resumo = { novos: 0, ignorados: 0 };
+  const resumo = { novos: 0, ativos: 0, ignorados: 0 };
+  const config = lerConfig();
+  const autoAtivar = config.coletorAutoAtivar === true;
+  const descontoMin = Number(config.coletorDescontoMin) || 30;
 
   for (const nome of arquivos) {
     const caminho = path.join(ENTRADA, nome);
@@ -51,13 +70,20 @@ function importarColetor() {
       const id = idML(item && item.linkOriginal);
       if (!ok || linksJa.has(item.linkAfiliado) || (id && idsJa.has(id))) { resumo.ignorados++; continue; }
 
-      adicionarProduto({
+      const desconto = Math.round((1 - Number(item.preco) / Number(item.precoAntigo)) * 100);
+      const bom = autoAtivar
+        && desconto >= descontoMin
+        && !!item.imagem
+        && (!item.avaliacao || Number(item.avaliacao) >= 4.3)
+        && !TITULO_SUSPEITO.test(String(item.titulo));
+
+      const salvo = adicionarProduto({
         marketplace: 'mercadolivre',
-        categoria: 'Coletor - revisar',
+        categoria: bom ? 'Coletor' : 'Coletor - revisar',
         titulo: String(item.titulo).trim(),
         preco: Number(item.preco),
         precoAntigo: Number(item.precoAntigo),
-        desconto: Math.round((1 - Number(item.preco) / Number(item.precoAntigo)) * 100),
+        desconto,
         avaliacao: item.avaliacao || null,
         vendidos: item.vendidos || null,
         ganhoPercentual: item.ganhoPercentual || null,
@@ -65,9 +91,10 @@ function importarColetor() {
         linkOriginal: item.linkOriginal || '',
         linkAfiliado: item.linkAfiliado,
         texto: '',
-        ativo: false,            // SEMPRE inativo: você aprova no painel
+        ativo: bom,   // o sistema ainda trava sozinho se for repetido ou sem desconto real
         origem: 'coletor',
       });
+      if (salvo && salvo.ativo) resumo.ativos++;
       linksJa.add(item.linkAfiliado);
       if (id) idsJa.add(id);
       resumo.novos++;
@@ -77,7 +104,7 @@ function importarColetor() {
   }
 
   if (resumo.novos || resumo.ignorados) {
-    console.log(`📥 Coletor: ${resumo.novos} produto(s) novo(s) importado(s) (inativos, aguardando sua aprovação); ${resumo.ignorados} ignorado(s).`);
+    console.log(`📥 Coletor: ${resumo.novos} produto(s) novo(s) (${resumo.ativos} ativado(s) automaticamente, ${resumo.novos - resumo.ativos} para revisar); ${resumo.ignorados} ignorado(s).`);
   }
 }
 
