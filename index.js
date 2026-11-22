@@ -26,6 +26,7 @@ const { router: verificacaoRoute, rodarVerificacaoSemanal } = require('./routes/
 const session = require('express-session');
 const scheduler = require('./scheduler');
 const convite = require('./convite');
+const { importarColetor } = require('./importador-coletor');
 
 // ======= CONFIGURAÇÕES =======
 // Cole aqui o ID do grupo. Para descobrir o ID, rode: npm run listar-grupos
@@ -791,3 +792,16 @@ setInterval(() => {
   try { fs.unlinkSync(gatilho); } catch (_) { return; }
   enfileirar(() => convite.testeAgora(client, GROUP_ID, carregarConfig(), comTimeout));
 }, 15 * 1000);
+
+// ---- Importação dos produtos do coletor ----
+// A cada 5 minutos olha a pasta "coletor-entrada" e cadastra (INATIVOS) os
+// produtos que o coletor deixou lá. Veja importador-coletor.js.
+function rodarImportacaoColetor() {
+  try {
+    importarColetor();
+  } catch (erro) {
+    console.error('⚠️ Importação do coletor falhou:', erro.message || erro);
+  }
+}
+setTimeout(rodarImportacaoColetor, 20 * 1000);
+setInterval(rodarImportacaoColetor, 5 * 60 * 1000);

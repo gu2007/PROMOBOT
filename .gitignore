@@ -20,3 +20,10 @@ Thumbs.db
 
 convite.json
 convite.json.tmp
+
+# Coletor de produtos (perfil do Chrome tem seu login!)
+coletor/perfil-chrome/
+coletor/resultado.json
+coletor/perfil-chrome-real/
+coletor-entrada/
+coletor-processados/
