@@ -1,82 +1,85 @@
 /* =====================================================================
-   I AMA PROMOS / PROMOBOT — DESIGN SYSTEM (Fase 1, estilo B "creme claro")
+   I AMA PROMOS / PROMOBOT — DESIGN SYSTEM v2 (moderno, estilo aplicativo)
    ---------------------------------------------------------------------
-   Como este arquivo está organizado:
-     1. Fontes e variáveis (cores, tamanhos, sombras)  -> mude aqui e o
-        painel inteiro muda junto.
-     2. Base (corpo da página, títulos, links)
-     3. Menu lateral + botão do menu
-     4. Componentes: botões, badges, chips, cards, formulários, etc.
-     5. Telas específicas (login, produtos, importação, logs)
-     6. Ajustes para celular / PC (media queries)
+   Organização do arquivo:
+     1. Fonte e variáveis (cores, tamanhos) -> mude aqui, muda tudo
+     2. Base (página, títulos)
+     3. Navegação: barra de abas embaixo (celular) e barra no topo (PC)
+     4. Componentes: botões, etiquetas, chips, interruptor, folha (painel
+        que sobe de baixo), aviso (toast), cards
+     5. Telas: Início, Ofertas, Login
+     6. Classes ANTIGAS que o JS das outras páginas ainda usa
+        (.cartaoProdutoPequeno, .abaMarketplace, .formulario...). Elas
+        continuam funcionando com o visual novo.
+     7. Ajustes para tablet e PC (media queries)
 
-   IMPORTANTE: os nomes de classe antigos (ex.: .cartaoProdutoPequeno,
-   .abaMarketplace) foram MANTIDOS, porque o JavaScript cria esses
-   elementos. Só o visual mudou. A versão anterior está em style.antigo.css.
+   O arquivo anterior está salvo em style.antigo.css.
    ===================================================================== */
 
-/* Fraunces = títulos (serifada, combina com o logo); Inter = textos */
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 /* ===== 1. VARIÁVEIS ===================================================== */
 :root{
 
-    /* --- Cores da marca (tiradas do logo convite.jpg) --- */
-    --marca-verde:#0d2217;          /* verde-escuro do fundo do logo */
-    --marca-verde-2:#173a28;        /* verde um pouco mais claro (hover no menu) */
-    --marca-creme:#f5ecdc;          /* creme das letras do logo */
-    --marca-dourado:#d1a23f;        /* dourado da sacola/coração */
-    --marca-dourado-escuro:#8a6414; /* dourado para TEXTO (contraste ok no branco) */
-    --marca-dourado-fundo:#fbf1dc;  /* dourado bem clarinho, para fundos */
+    /* Marca (logo) */
+    --marca:#0d2217;              /* verde-escuro do logo: botões principais, aba ativa */
+    --marca-2:#1d3b2b;            /* verde-escuro mais claro: hover */
+    --dourado:#d1a23f;            /* selo de desconto, detalhes */
+    --dourado-texto:#7a5710;      /* dourado legível em fundo claro */
+    --dourado-fundo:#fbf3e1;
 
-    /* --- Cores de uso geral (os nomes antigos continuam valendo) --- */
-    --cor-fundo:#f7f5f0;            /* fundo da página: creme bem claro */
-    --cor-superficie:#ffffff;       /* fundo de cards e caixas */
-    --cor-superficie-2:#fbf8f2;     /* fundo de área secundária */
+    /* Neutros */
+    --fundo:#f4f5f3;              /* fundo da página (cinza bem claro) */
+    --superficie:#ffffff;         /* cards */
+    --superficie-2:#f8f9f7;       /* áreas internas */
+    --texto:#0f1a14;              /* texto principal */
+    --texto-2:#5b6560;            /* texto de apoio */
+    --texto-3:#6f7872;            /* dicas (contraste ok) */
+    --linha:#e4e7e3;              /* bordas */
+    --linha-forte:#d2d7d1;
 
-    --cor-texto:#1c2620;            /* texto principal (quase preto esverdeado) */
-    --cor-texto-secundario:#5c665f; /* texto de apoio */
-    --cor-texto-terciario:#767d78;  /* dicas, IDs (ainda legível: contraste 4.5) */
+    /* Estados (sempre com texto junto, nunca só a cor) */
+    --ok:#16a34a;      --ok-fundo:#dcfce7;      --ok-texto:#166534;
+    --aviso:#d97706;   --aviso-fundo:#fef3c7;   --aviso-texto:#92400e;
+    --perigo:#dc2626;  --perigo-fundo:#fee2e2;  --perigo-texto:#b91c1c;
+    --info:#0284c7;    --info-fundo:#e0f2fe;    --info-texto:#075985;
 
-    --cor-primaria:#1e5b3a;         /* verde dos botões principais */
-    --cor-primaria-hover:#174a2f;
-    --cor-primaria-fundo:#e8f1ea;   /* verde clarinho: seleção, aba ativa */
+    /* Formas */
+    --raio-p:10px;
+    --raio:14px;
+    --raio-g:20px;
+    --pilula:999px;
 
-    --cor-sucesso:#1f7a45;
-    --cor-sucesso-fundo:#e3f3e8;
-    --cor-aviso:#a86a07;
-    --cor-aviso-fundo:#fdf0d5;
-    --cor-perigo:#c0362c;
-    --cor-perigo-fundo:#fbe6e3;
+    --sombra:0 1px 2px rgba(15,26,20,.04), 0 2px 8px rgba(15,26,20,.04);
+    --sombra-alta:0 12px 32px rgba(15,26,20,.14);
 
-    --cor-borda:#e7e2d6;            /* borda padrão (bege suave) */
-    --cor-borda-forte:#d5cebe;
+    --fonte:'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-    /* --- Formas e sombras --- */
-    --raio:10px;                    /* botões, campos */
-    --raio-grande:14px;             /* cards */
-    --raio-pilula:999px;            /* chips, badges */
+    --toque:44px;                 /* altura mínima de algo clicável */
+    --altura-nav-baixo:68px;      /* barra de abas do celular */
+    --altura-nav-topo:64px;       /* barra do PC */
 
-    --sombra-card:0 1px 2px rgba(13,34,23,.05), 0 1px 3px rgba(13,34,23,.06);
-    --sombra-elevada:0 6px 20px rgba(13,34,23,.10);
-
-    /* --- Tipografia --- */
-    --fonte-titulo:'Fraunces', Georgia, 'Times New Roman', serif;
-    --fonte-texto:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-
-    /* --- Espaçamentos (use sempre estes, para tudo ficar alinhado) --- */
-    --esp-1:4px;
-    --esp-2:8px;
-    --esp-3:12px;
-    --esp-4:16px;
-    --esp-5:24px;
-    --esp-6:32px;
-
-    /* Altura mínima de qualquer coisa clicável (bom para o dedo no celular) */
-    --altura-toque:44px;
-
-    /* Largura do menu lateral no PC */
-    --largura-menu:250px;
+    /* --- Nomes ANTIGOS (o JS de outras páginas usa em style="...") --- */
+    --cor-fundo:var(--fundo);
+    --cor-superficie:var(--superficie);
+    --cor-superficie-2:var(--superficie-2);
+    --cor-texto:var(--texto);
+    --cor-texto-secundario:var(--texto-2);
+    --cor-texto-terciario:var(--texto-3);
+    --cor-primaria:var(--marca);
+    --cor-primaria-hover:var(--marca-2);
+    --cor-primaria-fundo:#e9efeb;
+    --cor-sucesso:var(--ok);
+    --cor-sucesso-fundo:var(--ok-fundo);
+    --cor-aviso:var(--aviso);
+    --cor-aviso-fundo:var(--aviso-fundo);
+    --cor-perigo:var(--perigo);
+    --cor-perigo-fundo:var(--perigo-fundo);
+    --cor-borda:var(--linha);
+    --cor-borda-forte:var(--linha-forte);
+    --raio-grande:var(--raio-g);
+    --sombra-card:var(--sombra);
+    --sombra-elevada:var(--sombra-alta);
 
 }
 
@@ -87,382 +90,360 @@
     box-sizing:border-box;
 }
 
+html{
+    -webkit-text-size-adjust:100%;
+}
+
 body{
-    display:flex;
     min-height:100vh;
-    background:var(--cor-fundo);
-    color:var(--cor-texto);
-    font-family:var(--fonte-texto);
+    background:var(--fundo);
+    color:var(--texto);
+    font-family:var(--fonte);
     font-size:15px;
     line-height:1.5;
     -webkit-font-smoothing:antialiased;
+    -webkit-tap-highlight-color:transparent;
 }
 
-/* Inputs e botões não herdam a fonte sozinhos — forçamos aqui */
 button, input, select, textarea{
     font-family:inherit;
+    color:inherit;
 }
 
 h1{
-    font-family:var(--fonte-titulo);
     font-size:26px;
-    font-weight:600;
-    line-height:1.2;
-    color:var(--marca-verde);
+    font-weight:800;
+    letter-spacing:-.5px;
+    line-height:1.15;
 }
 
 h2{
-    font-family:var(--fonte-titulo);
-    font-weight:600;
+    font-size:18px;
+    font-weight:700;
+    letter-spacing:-.2px;
+}
+
+h3{
+    font-size:15px;
+    font-weight:700;
 }
 
 a{
-    color:var(--cor-primaria);
+    color:var(--marca);
 }
 
 img{
     max-width:100%;
+    display:block;
 }
 
-/* Anel de foco visível para quem navega pelo teclado (acessibilidade) */
+/* Anel de foco para quem usa teclado (acessibilidade) */
 :focus-visible{
-    outline:3px solid rgba(209,162,63,.55);
+    outline:3px solid rgba(209,162,63,.6);
     outline-offset:2px;
 }
 
-/* ===== 3. MENU LATERAL ================================================== */
-/* No celular: escondido, abre pelo botão ☰. No PC (>=1024px): sempre aberto. */
-
-.sidebar{
-    position:fixed;
-    top:0;
-    left:0;
-    width:var(--largura-menu);
-    height:100vh;
-    background:var(--marca-verde);
-    color:var(--marca-creme);
-    padding:20px 14px;
-    transform:translateX(-100%);
-    transition:transform .25s ease;
-    z-index:999;
-    overflow-y:auto;
+/* Texto só para leitor de tela (invisível na tela) */
+.soLeitor{
+    position:absolute;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+    clip:rect(0 0 0 0);
 }
 
-.sidebar.aberta{
-    transform:translateX(0);
-    box-shadow:var(--sombra-elevada);
+/* Área principal de cada página.
+   No celular sobra espaço embaixo para a barra de abas. */
+main{
+    width:100%;
+    max-width:1240px;
+    margin:0 auto;
+    padding:20px 16px calc(var(--altura-nav-baixo) + 32px);
 }
 
-/* Nome da marca no topo do menu */
-.sidebar h2{
-    font-size:20px;
-    color:var(--marca-creme);
-    padding:6px 12px 22px;
-    margin-bottom:10px;
-    border-bottom:1px solid rgba(245,236,220,.12);
-    letter-spacing:.2px;
-}
-
-/* Logo (quando a imagem for colocada no menu) */
-.sidebar .logoMenu{
-    display:block;
-    width:150px;
-    margin:0 auto 18px;
-}
-
-.sidebar nav{
-    display:flex;
-    flex-direction:column;
-    gap:2px;
-}
-
-.sidebar a,
-.grupoMenu summary{
+/* Cabeçalho da página: título + botões */
+.cabecalhoPagina,
+header{
     display:flex;
     align-items:center;
-    gap:10px;
-    min-height:var(--altura-toque);
-    color:rgba(245,236,220,.78);
-    text-decoration:none;
-    padding:10px 12px;
-    border-radius:var(--raio);
-    font-size:14px;
-    font-weight:500;
-    transition:background .15s, color .15s;
-}
-
-.sidebar a:hover,
-.grupoMenu summary:hover{
-    background:rgba(245,236,220,.08);
-    color:var(--marca-creme);
-}
-
-/* Página atual: fundo verde mais claro + barrinha dourada à esquerda */
-.sidebar a.ativo{
-    background:var(--marca-verde-2);
-    color:#ffffff;
-    box-shadow:inset 3px 0 0 var(--marca-dourado);
-}
-
-/* Grupo "Produtos" que abre e fecha */
-.grupoMenu{
-    margin-bottom:2px;
-}
-
-.grupoMenu summary{
-    list-style:none;
-    cursor:pointer;
     justify-content:space-between;
-    user-select:none;
+    gap:12px;
+    margin-bottom:18px;
 }
 
-.grupoMenu summary::-webkit-details-marker{
-    display:none;
+.cabecalhoPagina .acoesCabecalho{
+    display:flex;
+    gap:8px;
+    flex:none;
 }
 
-.grupoMenu summary::after{
-    content:"›";
-    transform:rotate(90deg);
-    transition:transform .15s;
-    font-size:18px;
-    line-height:1;
+/* Linha pequena em cima do título (ex.: "Boa tarde, Gustavo") */
+.sobretitulo{
+    font-size:13px;
+    color:var(--texto-2);
+    font-weight:500;
 }
 
-.grupoMenu[open] summary::after{
-    transform:rotate(270deg);
+.subtitulo{
+    color:var(--texto-2);
+    font-size:14px;
+    margin-top:4px;
+    max-width:65ch;
 }
 
-.submenu{
+/* Título de seção dentro da página */
+.tituloSecao{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin:26px 0 12px;
+}
+
+.tituloSecao h2{
+    font-size:17px;
+}
+
+.tituloSecao a{
+    font-size:13px;
+    font-weight:600;
+    text-decoration:none;
+}
+
+/* ===== 3. NAVEGAÇÃO ===================================================== */
+/* O menu.js cria estes elementos em todas as páginas. */
+
+/* Esconde o menu antigo caso alguma página ainda tenha ele no HTML */
+.sidebar, .botaoMenu, .overlayMenu{
+    display:none !important;
+}
+
+/* --- Barra de abas (celular) --- */
+.navBaixo{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:900;
+    height:calc(var(--altura-nav-baixo) + env(safe-area-inset-bottom));
+    padding-bottom:env(safe-area-inset-bottom);   /* respeita a "barrinha" do iPhone */
+    background:rgba(255,255,255,.96);
+    backdrop-filter:blur(10px);
+    border-top:1px solid var(--linha);
+    display:flex;
+}
+
+.navBaixo a,
+.navBaixo button{
+    flex:1;
     display:flex;
     flex-direction:column;
-    gap:2px;
-    padding-left:12px;
-    margin:2px 0 6px;
-    border-left:1px solid rgba(245,236,220,.12);
-    margin-left:14px;
-}
-
-.submenu a{
-    font-size:13.5px;
-    min-height:40px;
-}
-
-/* Botão ☰ (só aparece no celular/tablet) */
-.botaoMenu{
-    position:fixed;
-    top:12px;
-    left:12px;
-    z-index:1000;
-    width:var(--altura-toque);
-    height:var(--altura-toque);
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    min-height:auto;
     padding:0;
-    background:var(--cor-superficie);
-    color:var(--marca-verde);
-    border:1px solid var(--cor-borda);
-    border-radius:var(--raio);
-    font-size:20px;
+    border:none;
+    border-radius:0;
+    background:none;
+    color:var(--texto-3);
+    font-size:11px;
+    font-weight:600;
+    text-decoration:none;
     cursor:pointer;
-    box-shadow:var(--sombra-card);
+}
+
+.navBaixo a:hover,
+.navBaixo button:hover{
+    background:none;
+    color:var(--texto);
+}
+
+.navBaixo svg{
+    width:23px;
+    height:23px;
+}
+
+/* Aba atual: ícone dentro de uma "pílula" verde */
+.navBaixo .ativo{
+    color:var(--marca);
+}
+
+.navBaixo .ativo .fundoIcone{
+    background:#e3ebe6;
+}
+
+.fundoIcone{
     display:flex;
     align-items:center;
     justify-content:center;
+    width:52px;
+    height:30px;
+    border-radius:var(--pilula);
+    transition:background .15s;
 }
 
-.botaoMenu:hover{
-    background:var(--cor-superficie-2);
-}
-
-/* Fundo escuro atrás do menu aberto no celular */
-.overlayMenu{
+/* --- Barra do topo (PC) --- escondida no celular */
+.navTopo{
     display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(13,34,23,.5);
-    z-index:998;
 }
 
-.overlayMenu.ativo{
-    display:block;
-}
-
-/* ===== 4. CONTEÚDO PRINCIPAL =========================================== */
-main{
-    flex:1;
-    width:100%;
-    max-width:1200px;
-    margin:0 auto;
-    padding:72px 16px 48px;   /* 72px em cima para não ficar atrás do ☰ */
-}
-
-/* Cabeçalho de página: título à esquerda, ações à direita */
-header,
-.cabecalhoPagina{
+.marcaLogo{
     display:flex;
-    justify-content:space-between;
     align-items:center;
-    flex-wrap:wrap;
-    gap:var(--esp-3);
-    margin-bottom:var(--esp-5);
+    gap:10px;
+    font-weight:800;
+    font-size:16px;
+    letter-spacing:-.3px;
+    color:var(--texto);
+    text-decoration:none;
 }
 
-/* Frase de explicação embaixo do título */
-.subtitulo{
-    color:var(--cor-texto-secundario);
-    font-size:14px;
-    margin-top:4px;
-    max-width:70ch;
+.iconeMarca{
+    width:34px;
+    height:34px;
+    border-radius:10px;
+    background:var(--marca);
+    color:var(--dourado);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:none;
 }
 
-/* ===== 5. BOTÕES ======================================================== */
-/* Padrão = botão secundário (contorno). Use .primario só para a AÇÃO
-   PRINCIPAL da tela (uma por tela, para ficar claro o que fazer). */
+.iconeMarca svg{
+    width:19px;
+    height:19px;
+}
 
+/* ===== 4. COMPONENTES =================================================== */
+
+/* --- Ícones (SVG desenhados pelo menu.js) --- */
+.icone{
+    width:20px;
+    height:20px;
+    flex:none;
+}
+
+/* --- Botões ---
+   Padrão = contorno. .primario = ação principal (1 por tela). */
 button, .botao{
     display:inline-flex;
     align-items:center;
     justify-content:center;
     gap:8px;
-    min-height:var(--altura-toque);
-    font-size:14px;
-    font-weight:600;
+    min-height:var(--toque);
     padding:10px 18px;
-    border-radius:var(--raio);
-    border:1px solid var(--cor-borda-forte);
-    background:var(--cor-superficie);
-    color:var(--cor-texto);
-    cursor:pointer;
+    border-radius:var(--pilula);
+    border:1px solid var(--linha-forte);
+    background:var(--superficie);
+    color:var(--texto);
+    font-size:14px;
+    font-weight:700;
     text-decoration:none;
-    transition:background .15s, border-color .15s, transform .05s;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:background .15s, border-color .15s, transform .08s;
 }
 
 button:hover, .botao:hover{
-    background:var(--cor-superficie-2);
-    border-color:var(--cor-texto-terciario);
+    background:var(--superficie-2);
+    border-color:var(--texto-3);
 }
 
 button:active, .botao:active{
-    transform:scale(.98);
+    transform:scale(.97);
 }
 
 button:disabled{
-    opacity:.55;
+    opacity:.5;
     cursor:wait;
 }
 
-/* Botão principal (verde) */
 button.primario, .botao.primario{
-    background:var(--cor-primaria);
-    border-color:var(--cor-primaria);
+    background:var(--marca);
+    border-color:var(--marca);
     color:#ffffff;
 }
 
 button.primario:hover, .botao.primario:hover{
-    background:var(--cor-primaria-hover);
-    border-color:var(--cor-primaria-hover);
+    background:var(--marca-2);
+    border-color:var(--marca-2);
 }
 
-/* Botão dourado (destaque de marca, ex.: "Novo produto", "Ver oferta") */
 button.destaque, .botao.destaque{
-    background:var(--marca-dourado);
-    border-color:var(--marca-dourado);
-    color:#2a1d05;
+    background:var(--dourado);
+    border-color:var(--dourado);
+    color:#231700;
 }
 
-button.destaque:hover, .botao.destaque:hover{
-    background:#c29231;
-    border-color:#c29231;
-}
-
-/* Botão de perigo (excluir) */
 button.perigo, .botao.perigo{
-    color:var(--cor-perigo);
-    border-color:#efc2bd;
+    color:var(--perigo-texto);
+    border-color:#f5c2c2;
 }
 
 button.perigo:hover, .botao.perigo:hover{
-    background:var(--cor-perigo-fundo);
-    border-color:var(--cor-perigo);
+    background:var(--perigo-fundo);
+    border-color:var(--perigo);
 }
 
-/* Botão "fantasma" (sem borda, para ações discretas) */
 button.fantasma, .botao.fantasma{
     background:transparent;
     border-color:transparent;
-    color:var(--cor-texto-secundario);
+    color:var(--texto-2);
 }
 
 button.fantasma:hover, .botao.fantasma:hover{
-    background:rgba(13,34,23,.05);
-    color:var(--cor-texto);
+    background:rgba(15,26,20,.05);
 }
 
-/* Botão pequeno e botão só com ícone */
+/* Botão redondo só com ícone (ex.: + , filtros) */
+button.redondo, .botao.redondo{
+    width:var(--toque);
+    height:var(--toque);
+    padding:0;
+    flex:none;
+}
+
 button.pequeno, .botao.pequeno{
     min-height:36px;
-    padding:6px 12px;
+    padding:6px 14px;
     font-size:13px;
 }
 
-button.icone, .botao.icone{
-    width:var(--altura-toque);
-    padding:0;
+button.largo, .botao.largo{
+    width:100%;
 }
 
-/* Botão secundário antigo (mantido) */
 .botaoSecundario{
-    background:var(--cor-superficie);
+    background:var(--superficie);
 }
 
-/* ===== 6. BADGES (etiquetas de status) ================================= */
-/* Sempre cor + texto: assim quem não distingue cores também entende. */
-
-.badge{
+/* --- Etiquetas de status --- */
+.badge, .etiqueta{
     display:inline-flex;
     align-items:center;
     gap:5px;
     font-size:12px;
-    font-weight:600;
-    padding:3px 10px;
-    border-radius:var(--raio-pilula);
-    line-height:1.5;
-    white-space:nowrap;
-}
-
-/* Bolinha antes do texto do badge */
-.badge::before{
-    content:"";
-    width:6px;
-    height:6px;
-    border-radius:50%;
-    background:currentColor;
-}
-
-.badge-sucesso{ background:var(--cor-sucesso-fundo); color:#17603a; }
-.badge-aviso{ background:var(--cor-aviso-fundo); color:#7f4f05; }
-.badge-perigo{ background:var(--cor-perigo-fundo); color:#982a21; }
-.badge-neutro{ background:var(--cor-superficie-2); color:var(--cor-texto-secundario); border:1px solid var(--cor-borda); }
-.badge-marca{ background:var(--marca-dourado-fundo); color:var(--marca-dourado-escuro); }
-
-/* Selo de desconto (-45%) que fica em cima da foto do produto */
-.seloDesconto{
-    position:absolute;
-    top:8px;
-    left:8px;
-    z-index:1;
-    background:var(--marca-dourado);
-    color:#2a1d05;
-    font-size:12px;
     font-weight:700;
-    padding:3px 8px;
-    border-radius:var(--raio-pilula);
+    padding:3px 10px;
+    border-radius:var(--pilula);
+    white-space:nowrap;
+    line-height:1.5;
 }
 
-/* ===== 7. CHIPS (filtros que a gente liga/desliga) ===================== */
+.badge-sucesso, .etiqueta.ok{ background:var(--ok-fundo); color:var(--ok-texto); }
+.badge-aviso, .etiqueta.aviso{ background:var(--aviso-fundo); color:var(--aviso-texto); }
+.badge-perigo, .etiqueta.perigo{ background:var(--perigo-fundo); color:var(--perigo-texto); }
+.badge-neutro, .etiqueta.neutra{ background:var(--superficie-2); color:var(--texto-2); border:1px solid var(--linha); }
+.badge-marca, .etiqueta.marca{ background:var(--dourado-fundo); color:var(--dourado-texto); }
+
+/* --- Chips (filtros de tocar) --- */
 .listaChips{
     display:flex;
-    gap:var(--esp-2);
-    overflow-x:auto;              /* no celular, rola de lado com o dedo */
-    padding-bottom:4px;
+    gap:8px;
+    overflow-x:auto;
+    margin:0 -16px;          /* encosta na borda da tela no celular */
+    padding:2px 16px 4px;
     scrollbar-width:none;
 }
 
@@ -472,51 +453,42 @@ button.icone, .botao.icone{
 
 .chip{
     flex:none;
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
     min-height:38px;
-    padding:6px 14px;
-    border-radius:var(--raio-pilula);
-    border:1px solid var(--cor-borda-forte);
-    background:var(--cor-superficie);
-    color:var(--cor-texto-secundario);
+    padding:7px 15px;
+    border-radius:var(--pilula);
+    border:1px solid var(--linha);
+    background:var(--superficie);
+    color:var(--texto-2);
     font-size:13px;
-    font-weight:600;
-    cursor:pointer;
-    white-space:nowrap;
+    font-weight:700;
 }
 
 .chip:hover{
-    border-color:var(--cor-primaria);
-    color:var(--cor-texto);
-    background:var(--cor-superficie);
+    background:var(--superficie);
+    border-color:var(--linha-forte);
+    color:var(--texto);
 }
 
 .chip.ativo{
-    background:var(--marca-verde);
-    border-color:var(--marca-verde);
-    color:var(--marca-creme);
+    background:var(--marca);
+    border-color:var(--marca);
+    color:#ffffff;
 }
 
-/* Número pequeno dentro do chip, ex.: "Ativos 318" */
 .chip .contador{
-    font-size:11px;
-    opacity:.75;
+    font-weight:600;
+    opacity:.65;
+    font-size:12px;
 }
 
-/* ===== 8. INTERRUPTOR (liga/desliga, ex.: ativar produto) ============== */
-/* Uso: <label class="interruptor"><input type="checkbox"><span></span> Ativo</label> */
+/* --- Interruptor liga/desliga ---
+   <label class="interruptor"><input type="checkbox"><span></span></label> */
 .interruptor{
+    position:relative;
     display:inline-flex;
     align-items:center;
-    gap:8px;
     cursor:pointer;
-    font-size:13px;
-    font-weight:600;
-    color:var(--cor-texto-secundario);
-    min-height:var(--altura-toque);
-    user-select:none;
+    flex:none;
 }
 
 .interruptor input{
@@ -528,12 +500,11 @@ button.icone, .botao.icone{
 
 .interruptor span{
     position:relative;
-    width:42px;
-    height:24px;
-    border-radius:var(--raio-pilula);
-    background:#cfc8b8;
-    transition:background .15s;
-    flex:none;
+    width:50px;
+    height:30px;
+    border-radius:var(--pilula);
+    background:#cdd3ce;
+    transition:background .2s;
 }
 
 .interruptor span::after{
@@ -541,87 +512,988 @@ button.icone, .botao.icone{
     position:absolute;
     top:3px;
     left:3px;
-    width:18px;
-    height:18px;
+    width:24px;
+    height:24px;
     border-radius:50%;
     background:#ffffff;
-    box-shadow:0 1px 2px rgba(0,0,0,.2);
-    transition:transform .15s;
+    box-shadow:0 1px 3px rgba(0,0,0,.25);
+    transition:transform .2s;
 }
 
 .interruptor input:checked + span{
-    background:var(--cor-sucesso);
+    background:var(--ok);
 }
 
 .interruptor input:checked + span::after{
-    transform:translateX(18px);
+    transform:translateX(20px);
 }
 
 .interruptor input:focus-visible + span{
-    outline:3px solid rgba(209,162,63,.55);
+    outline:3px solid rgba(209,162,63,.6);
     outline-offset:2px;
 }
 
-/* ===== 9. CARDS DE RESUMO (dashboard) ================================== */
+/* --- Campo de busca redondo --- */
+.campoBusca{
+    flex:1;
+    width:100%;
+    min-width:0;
+    min-height:var(--toque);
+    padding:10px 16px 10px 42px;
+    border:1px solid var(--linha);
+    border-radius:var(--pilula);
+    background:var(--superficie)
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%235b6560' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E")
+        no-repeat 15px center;
+    font-size:16px;          /* 16px evita zoom automático no iPhone */
+}
+
+.campoBusca:focus{
+    outline:none;
+    border-color:var(--marca);
+    box-shadow:0 0 0 3px #e3ebe6;
+}
+
+/* --- Bloco branco genérico --- */
+.bloco{
+    background:var(--superficie);
+    border:1px solid var(--linha);
+    border-radius:var(--raio-g);
+}
+
+/* --- Folha (painel que sobe de baixo no celular / janela no PC) --- */
+.fundoFolha{
+    position:fixed;
+    inset:0;
+    z-index:1000;
+    background:rgba(15,26,20,.45);
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    opacity:0;
+    transition:opacity .2s;
+}
+
+.fundoFolha.aberta{
+    opacity:1;
+}
+
+.folha{
+    width:100%;
+    max-width:560px;
+    max-height:88vh;
+    overflow-y:auto;
+    background:var(--superficie);
+    border-radius:24px 24px 0 0;
+    padding:10px 20px calc(24px + env(safe-area-inset-bottom));
+    transform:translateY(100%);
+    transition:transform .25s cubic-bezier(.2,.8,.2,1);
+}
+
+.fundoFolha.aberta .folha{
+    transform:translateY(0);
+}
+
+/* Tracinho no topo da folha (indica que dá para arrastar/fechar) */
+.alcaFolha{
+    width:40px;
+    height:5px;
+    border-radius:9px;
+    background:var(--linha-forte);
+    margin:0 auto 14px;
+}
+
+.cabecalhoFolha{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+}
+
+.cabecalhoFolha h2{
+    font-size:19px;
+}
+
+/* Lista de links dentro da folha "Mais" */
+.listaMenu{
+    display:flex;
+    flex-direction:column;
+}
+
+.listaMenu a,
+.listaMenu button{
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    gap:14px;
+    min-height:56px;
+    padding:8px 4px;
+    border:none;
+    border-bottom:1px solid var(--linha);
+    border-radius:0;
+    background:none;
+    color:var(--texto);
+    font-size:15px;
+    font-weight:600;
+    text-decoration:none;
+    text-align:left;
+    width:100%;
+}
+
+.listaMenu a:last-child,
+.listaMenu button:last-child{
+    border-bottom:none;
+}
+
+.listaMenu a:hover,
+.listaMenu button:hover{
+    background:none;
+    color:var(--marca);
+}
+
+.listaMenu small{
+    display:block;
+    font-size:12.5px;
+    font-weight:500;
+    color:var(--texto-2);
+}
+
+.listaMenu .seta{
+    margin-left:auto;
+    color:var(--texto-3);
+}
+
+/* Quadradinho colorido com ícone (usado em listas) */
+.quadradoIcone{
+    width:40px;
+    height:40px;
+    border-radius:12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:none;
+    background:var(--superficie-2);
+    color:var(--texto-2);
+}
+
+.quadradoIcone.aviso{ background:var(--aviso-fundo); color:var(--aviso-texto); }
+.quadradoIcone.perigo{ background:var(--perigo-fundo); color:var(--perigo-texto); }
+.quadradoIcone.info{ background:var(--info-fundo); color:var(--info-texto); }
+.quadradoIcone.ok{ background:var(--ok-fundo); color:var(--ok-texto); }
+
+/* --- Aviso rápido que some sozinho (toast) --- */
+.toast{
+    position:fixed;
+    left:50%;
+    bottom:calc(var(--altura-nav-baixo) + 16px + env(safe-area-inset-bottom));
+    z-index:1100;
+    transform:translate(-50%, 20px);
+    opacity:0;
+    transition:opacity .2s, transform .2s;
+    background:var(--texto);
+    color:#ffffff;
+    padding:12px 20px;
+    border-radius:var(--pilula);
+    font-size:14px;
+    font-weight:600;
+    box-shadow:var(--sombra-alta);
+    max-width:calc(100% - 32px);
+    text-align:center;
+}
+
+.toast.visivel{
+    opacity:1;
+    transform:translate(-50%, 0);
+}
+
+.toast.erro{
+    background:var(--perigo-texto);
+}
+
+/* --- Lista vazia / carregando --- */
+.estadoVazio{
+    grid-column:1 / -1;
+    text-align:center;
+    padding:48px 20px;
+    color:var(--texto-2);
+    font-size:14px;
+}
+
+.estadoVazio strong{
+    display:block;
+    color:var(--texto);
+    font-size:17px;
+    margin-bottom:4px;
+}
+
+.estadoVazio button{
+    margin-top:14px;
+}
+
+/* "Esqueleto" cinza enquanto carrega */
+.carregando{
+    background:linear-gradient(90deg, #eceeeb 25%, #f5f6f4 50%, #eceeeb 75%);
+    background-size:200% 100%;
+    animation:brilho 1.2s infinite;
+    border-radius:var(--raio);
+}
+
+@keyframes brilho{
+    from{ background-position:200% 0; }
+    to{ background-position:-200% 0; }
+}
+
+/* ===== 5A. TELA INÍCIO ================================================== */
+
+/* Cartão verde do robô */
+.cartaoRobo{
+    background:var(--marca);
+    color:#ffffff;
+    border-radius:24px;
+    padding:20px;
+    position:relative;
+    overflow:hidden;
+}
+
+/* Círculo dourado decorativo no canto */
+.cartaoRobo::after{
+    content:"";
+    position:absolute;
+    right:-50px;
+    top:-50px;
+    width:160px;
+    height:160px;
+    border-radius:50%;
+    border:24px solid rgba(209,162,63,.14);
+}
+
+.cartaoRobo .topoRobo{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-size:13px;
+    color:rgba(255,255,255,.7);
+    font-weight:600;
+}
+
+.pilulaStatus{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    font-weight:700;
+    padding:4px 11px;
+    border-radius:var(--pilula);
+    background:rgba(255,255,255,.12);
+    color:#ffffff;
+}
+
+.pilulaStatus::before{
+    content:"";
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#4ade80;
+}
+
+.pilulaStatus.pausado::before{
+    background:#fbbf24;
+}
+
+.cartaoRobo .fraseRobo{
+    font-size:22px;
+    font-weight:800;
+    letter-spacing:-.4px;
+    margin:10px 0 4px;
+    line-height:1.2;
+}
+
+.cartaoRobo .detalheRobo{
+    font-size:13.5px;
+    color:rgba(255,255,255,.72);
+}
+
+.cartaoRobo .acoesRobo{
+    display:flex;
+    gap:8px;
+    margin-top:16px;
+    position:relative;
+    z-index:1;
+}
+
+.cartaoRobo .acoesRobo button{
+    flex:1;
+}
+
+.botaoClaro{
+    background:#ffffff !important;
+    border-color:#ffffff !important;
+    color:var(--marca) !important;
+}
+
+.botaoContornoClaro{
+    background:transparent !important;
+    border-color:rgba(255,255,255,.35) !important;
+    color:#ffffff !important;
+}
+
+.botaoContornoClaro:hover{
+    background:rgba(255,255,255,.08) !important;
+}
+
+/* Números (2 por linha no celular) */
+.numeros{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:10px;
+    margin-top:12px;
+}
+
+.numero{
+    background:var(--superficie);
+    border:1px solid var(--linha);
+    border-radius:var(--raio-g);
+    padding:14px 16px;
+    text-decoration:none;
+    color:inherit;
+    display:block;
+}
+
+a.numero:hover{
+    border-color:var(--linha-forte);
+}
+
+.numero span{
+    font-size:12.5px;
+    color:var(--texto-2);
+    font-weight:600;
+}
+
+.numero strong{
+    display:block;
+    font-size:26px;
+    font-weight:800;
+    letter-spacing:-.5px;
+    line-height:1.2;
+    margin-top:2px;
+}
+
+/* Lista "Precisa da sua atenção" */
+.listaAtencao{
+    background:var(--superficie);
+    border:1px solid var(--linha);
+    border-radius:var(--raio-g);
+    padding:0 14px;
+}
+
+.listaAtencao a{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 0;
+    border-bottom:1px solid var(--linha);
+    text-decoration:none;
+    color:var(--texto);
+}
+
+.listaAtencao a:last-child{
+    border-bottom:none;
+}
+
+.listaAtencao .textoItem{
+    flex:1;
+    min-width:0;
+    font-size:14px;
+    font-weight:700;
+    line-height:1.3;
+}
+
+.listaAtencao .textoItem small{
+    display:block;
+    font-size:12.5px;
+    font-weight:500;
+    color:var(--texto-2);
+}
+
+.listaAtencao .seta{
+    color:var(--texto-3);
+}
+
+.tudoEmDia{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:16px 0;
+    font-size:14px;
+    font-weight:600;
+}
+
+/* Barras de categoria */
+.listaCategorias{
+    background:var(--superficie);
+    border:1px solid var(--linha);
+    border-radius:var(--raio-g);
+    padding:6px 16px;
+}
+
+.linhaCategoria{
+    display:block;
+    padding:10px 0;
+    text-decoration:none;
+    color:var(--texto);
+    border-bottom:1px solid var(--linha);
+}
+
+.linhaCategoria:last-child{
+    border-bottom:none;
+}
+
+.linhaCategoria .rotuloCategoria{
+    display:flex;
+    justify-content:space-between;
+    font-size:14px;
+    font-weight:600;
+    margin-bottom:6px;
+}
+
+.linhaCategoria .rotuloCategoria span:last-child{
+    color:var(--texto-2);
+    font-weight:500;
+    font-size:13px;
+}
+
+.barraCategoria{
+    display:block;
+    height:8px;
+    border-radius:var(--pilula);
+    background:var(--superficie-2);
+    overflow:hidden;
+}
+
+.barraCategoria div{
+    height:100%;
+    border-radius:var(--pilula);
+    background:var(--marca);
+}
+
+/* Fileira de miniaturas "Postadas por último" */
+.fileiraMini{
+    display:flex;
+    gap:10px;
+    overflow-x:auto;
+    margin:0 -16px;
+    padding:0 16px 4px;
+    scrollbar-width:none;
+}
+
+.fileiraMini::-webkit-scrollbar{
+    display:none;
+}
+
+.mini{
+    flex:0 0 120px;
+    text-decoration:none;
+    color:var(--texto);
+}
+
+.mini .fotoMini{
+    aspect-ratio:1;
+    background:#ffffff;
+    border:1px solid var(--linha);
+    border-radius:var(--raio);
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.mini img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    padding:8px;
+}
+
+.mini p{
+    font-size:12px;
+    line-height:1.3;
+    margin-top:6px;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+}
+
+.mini small{
+    font-size:11.5px;
+    color:var(--texto-2);
+}
+
+/* ===== 5B. TELA OFERTAS ================================================= */
+
+.barraBusca{
+    display:flex;
+    gap:8px;
+    margin-bottom:12px;
+}
+
+/* Bolinha no botão de filtros indicando filtro ligado */
+.botaoComPonto{
+    position:relative;
+}
+
+.botaoComPonto.comFiltro::after{
+    content:"";
+    position:absolute;
+    top:8px;
+    right:8px;
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    background:var(--dourado);
+    border:2px solid #fff;
+}
+
+.resumoLista{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    font-size:13px;
+    color:var(--texto-2);
+    margin:14px 0 10px;
+}
+
+.resumoLista button{
+    min-height:32px;
+    padding:4px 10px;
+    font-size:13px;
+}
+
+/* Grade de ofertas: 2 colunas no celular */
+.gradeOfertas{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:14px 10px;
+}
+
+/* O cartão inteiro é um botão (toca e abre a folha do produto) */
+.cartaoOferta{
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:flex-start;
+    gap:0;
+    min-height:auto;
+    padding:0;
+    border:none;
+    border-radius:0;
+    background:none;
+    text-align:left;
+    font-weight:400;
+    white-space:normal;
+    cursor:pointer;
+}
+
+.cartaoOferta:hover{
+    background:none;
+}
+
+.cartaoOferta:hover .fotoOferta{
+    border-color:var(--linha-forte);
+    box-shadow:var(--sombra);
+}
+
+.fotoOferta{
+    position:relative;
+    aspect-ratio:1;
+    background:#ffffff;
+    border:1px solid var(--linha);
+    border-radius:var(--raio-g);
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--texto-3);
+    font-size:12px;
+    transition:border-color .15s, box-shadow .15s;
+}
+
+.fotoOferta img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    padding:10px;
+}
+
+/* Oferta pausada: foto em preto e branco */
+.cartaoOferta.pausada .fotoOferta img{
+    filter:grayscale(1);
+    opacity:.55;
+}
+
+.seloDesconto{
+    position:absolute;
+    top:8px;
+    left:8px;
+    z-index:1;
+    background:var(--dourado);
+    color:#231700;
+    font-size:12px;
+    font-weight:800;
+    padding:3px 8px;
+    border-radius:var(--pilula);
+}
+
+/* Etiqueta de status no canto de baixo da foto */
+.statusFoto{
+    position:absolute;
+    left:8px;
+    bottom:8px;
+    z-index:1;
+    font-size:11px;
+    font-weight:700;
+    padding:3px 8px;
+    border-radius:var(--pilula);
+    background:rgba(255,255,255,.95);
+    border:1px solid var(--linha);
+    color:var(--texto-2);
+}
+
+.statusFoto.aviso{
+    background:var(--aviso-fundo);
+    border-color:#f6dc9a;
+    color:var(--aviso-texto);
+}
+
+/* Bolinha verde = divulgando; cinza = pausada */
+.pontoStatus{
+    position:absolute;
+    top:10px;
+    right:10px;
+    z-index:1;
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    background:var(--ok);
+    border:2px solid #ffffff;
+    box-shadow:0 0 0 1px rgba(0,0,0,.06);
+}
+
+.cartaoOferta.pausada .pontoStatus{
+    background:#b8beb9;
+}
+
+.infoOferta{
+    padding:8px 2px 0;
+}
+
+.tituloOferta{
+    font-size:13px;
+    font-weight:500;
+    line-height:1.35;
+    color:var(--texto);
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+    min-height:35px;
+}
+
+.precoAntigo{
+    display:block;
+    font-size:12px;
+    color:var(--texto-3);
+    text-decoration:line-through;
+    margin-top:4px;
+}
+
+.precoAtual{
+    display:block;
+    font-size:17px;
+    font-weight:800;
+    letter-spacing:-.3px;
+    color:var(--texto);
+}
+
+.maisOfertas{
+    display:flex;
+    justify-content:center;
+    margin-top:24px;
+}
+
+/* Folha do produto */
+.topoProdutoFolha{
+    display:flex;
+    gap:14px;
+    align-items:flex-start;
+    margin-bottom:16px;
+}
+
+.topoProdutoFolha .fotoOferta{
+    width:96px;
+    flex:none;
+    border-radius:var(--raio);
+}
+
+.topoProdutoFolha h2{
+    font-size:16px;
+    line-height:1.35;
+    margin-bottom:6px;
+}
+
+.metaProduto{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+}
+
+.precosFolha{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    margin-top:8px;
+}
+
+.precosFolha .precoAtual{
+    font-size:20px;
+}
+
+.precosFolha .precoAntigo{
+    display:inline;
+    margin:0;
+}
+
+/* Linha "Divulgar nos grupos  [interruptor]" */
+.linhaInterruptor{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 0;
+    border-top:1px solid var(--linha);
+    border-bottom:1px solid var(--linha);
+}
+
+.linhaInterruptor strong{
+    display:block;
+    font-size:15px;
+}
+
+.linhaInterruptor small{
+    display:block;
+    font-size:12.5px;
+    color:var(--texto-2);
+}
+
+/* Botões quadrados com ícone em cima (Editar, Ver no site...) */
+.gradeAcoes{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:8px;
+    margin:14px 0;
+}
+
+.gradeAcoes button,
+.gradeAcoes a{
+    flex-direction:column;
+    gap:6px;
+    min-height:76px;
+    padding:10px 4px;
+    border:none;
+    border-radius:var(--raio);
+    background:var(--superficie-2);
+    font-size:12.5px;
+    font-weight:700;
+    white-space:normal;
+    text-align:center;
+}
+
+.gradeAcoes button:hover,
+.gradeAcoes a:hover{
+    background:#eceeeb;
+}
+
+.avisoFolha{
+    font-size:13px;
+    padding:10px 12px;
+    border-radius:var(--raio-p);
+    background:var(--aviso-fundo);
+    color:var(--aviso-texto);
+    margin-top:12px;
+}
+
+.infoFolha{
+    font-size:13px;
+    color:var(--texto-2);
+    margin-top:12px;
+}
+
+/* Grupo de opções dentro da folha de filtros */
+.grupoFiltro{
+    margin-bottom:20px;
+}
+
+.grupoFiltro h3{
+    font-size:14px;
+    margin-bottom:10px;
+}
+
+.grupoFiltro .opcoes{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+}
+
+.rodapeFolha{
+    display:flex;
+    gap:8px;
+    position:sticky;
+    bottom:-24px;
+    background:var(--superficie);
+    padding:12px 0 4px;
+    border-top:1px solid var(--linha);
+}
+
+.rodapeFolha button{
+    flex:1;
+}
+
+/* ===== 5C. LOGIN ======================================================== */
+.login-page{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px 16px;
+    max-width:none;
+    background:var(--fundo);
+}
+
+.login-box{
+    width:100%;
+    max-width:400px;
+    background:var(--superficie);
+    border:1px solid var(--linha);
+    border-radius:28px;
+    padding:32px 24px;
+    box-shadow:var(--sombra-alta);
+}
+
+.login-box .iconeMarca{
+    width:56px;
+    height:56px;
+    border-radius:18px;
+    margin-bottom:18px;
+}
+
+.login-box .iconeMarca svg{
+    width:30px;
+    height:30px;
+}
+
+.login-box h2{
+    font-size:26px;
+    font-weight:800;
+    letter-spacing:-.5px;
+}
+
+.login-box p{
+    color:var(--texto-2);
+    font-size:14px;
+    margin:4px 0 24px;
+}
+
+.login-box label{
+    display:block;
+    font-size:13px;
+    font-weight:700;
+    margin-bottom:6px;
+}
+
+.login-box input{
+    width:100%;
+    min-height:52px;
+    padding:12px 16px;
+    margin-bottom:14px;
+    border:1px solid var(--linha-forte);
+    border-radius:var(--raio);
+    background:var(--superficie);
+    font-size:16px;
+}
+
+.login-box input:focus{
+    outline:none;
+    border-color:var(--marca);
+    box-shadow:0 0 0 3px #e3ebe6;
+}
+
+.login-box button{
+    width:100%;
+    min-height:52px;
+    margin-top:6px;
+    background:var(--marca);
+    border-color:var(--marca);
+    color:#ffffff;
+    font-size:15px;
+}
+
+.login-box button:hover{
+    background:var(--marca-2);
+}
+
+.erro{
+    color:var(--perigo-texto);
+    margin-top:14px;
+    font-size:13.5px;
+    font-weight:600;
+}
+
+/* ===== 6. CLASSES ANTIGAS (outras páginas ainda usam) =================== */
+
 .cards{
     display:grid;
-    grid-template-columns:repeat(2, minmax(0,1fr));   /* 2 por linha no celular */
-    gap:var(--esp-3);
-    margin-bottom:var(--esp-5);
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:10px;
+    margin-bottom:20px;
 }
 
 .card{
-    background:var(--cor-superficie);
-    border:1px solid var(--cor-borda);
-    border-radius:var(--raio-grande);
-    padding:16px 18px;
-    box-shadow:var(--sombra-card);
+    background:var(--superficie);
+    border:1px solid var(--linha);
+    border-radius:var(--raio-g);
+    padding:16px;
 }
 
 a.card{
     display:block;
     text-decoration:none;
     color:inherit;
-    transition:border-color .15s, box-shadow .15s, transform .15s;
-}
-
-a.card:hover{
-    border-color:var(--marca-dourado);
-    box-shadow:var(--sombra-elevada);
-    transform:translateY(-1px);
 }
 
 .card h3{
     font-size:13px;
-    font-weight:500;
-    color:var(--cor-texto-secundario);
+    font-weight:600;
+    color:var(--texto-2);
     margin-bottom:6px;
 }
 
 .card p{
-    font-family:var(--fonte-titulo);
-    font-size:28px;
-    font-weight:600;
-    line-height:1.15;
-    color:var(--marca-verde);
+    font-size:15px;
 }
 
-.card p.valor-sucesso{ color:var(--cor-sucesso); }
-.card p.valor-aviso{ color:var(--cor-aviso); }
+.card p.valor-sucesso{ color:var(--ok-texto); }
+.card p.valor-aviso{ color:var(--aviso-texto); }
 
-/* Painel genérico (caixa branca com título) */
 .painel{
-    background:var(--cor-superficie);
-    border:1px solid var(--cor-borda);
-    border-radius:var(--raio-grande);
+    background:var(--superficie);
+    border:1px solid var(--linha);
+    border-radius:var(--raio-g);
     padding:20px;
-    box-shadow:var(--sombra-card);
-    margin-bottom:var(--esp-5);
+    margin-bottom:20px;
 }
 
 .painel h2{
-    font-size:18px;
-    color:var(--marca-verde);
     margin-bottom:14px;
 }
 
@@ -631,13 +1503,7 @@ a.card:hover{
     gap:16px;
     margin-bottom:10px;
     font-size:12px;
-    color:var(--cor-texto-secundario);
-}
-
-.legendaGrafico span{
-    display:flex;
-    align-items:center;
-    gap:6px;
+    color:var(--texto-2);
 }
 
 .pontoLegenda{
@@ -647,228 +1513,59 @@ a.card:hover{
     display:inline-block;
 }
 
-/* Mensagem de "lista vazia" (melhor que uma tela em branco) */
-.estadoVazio{
-    text-align:center;
-    padding:48px 16px;
-    color:var(--cor-texto-secundario);
-    background:var(--cor-superficie);
-    border:1px dashed var(--cor-borda-forte);
-    border-radius:var(--raio-grande);
-}
-
-.estadoVazio strong{
-    display:block;
-    font-family:var(--fonte-titulo);
-    font-size:18px;
-    color:var(--marca-verde);
-    margin-bottom:4px;
-}
-
-/* Aviso que aparece embaixo da tela e some sozinho ("Produto salvo") */
-.toast{
-    position:fixed;
-    left:50%;
-    bottom:20px;
-    transform:translateX(-50%);
-    z-index:1100;
-    background:var(--marca-verde);
-    color:var(--marca-creme);
-    padding:12px 18px;
-    border-radius:var(--raio);
-    font-size:14px;
-    font-weight:500;
-    box-shadow:var(--sombra-elevada);
-    max-width:calc(100% - 32px);
-}
-
-/* ===== 10. LOGIN ======================================================== */
-.login-page{
-    flex:1;
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:24px 16px;
-    background:var(--cor-fundo);
-}
-
-.login-box{
-    background:var(--cor-superficie);
-    border:1px solid var(--cor-borda);
-    border-radius:var(--raio-grande);
-    padding:32px 24px;
-    box-shadow:var(--sombra-elevada);
-    width:100%;
-    max-width:380px;
-    text-align:center;
-}
-
-.login-box .logoLogin{
-    width:120px;
-    margin:0 auto 16px;
-    display:block;
-    border-radius:var(--raio);
-}
-
-.login-box h2{
-    font-size:24px;
-    color:var(--marca-verde);
-    margin-bottom:6px;
-}
-
-.login-box p{
-    margin-bottom:22px;
-    color:var(--cor-texto-secundario);
-    font-size:14px;
-}
-
-.login-box input{
-    width:100%;
-    min-height:48px;
-    padding:12px 14px;
-    margin-bottom:12px;
-    border:1px solid var(--cor-borda-forte);
-    border-radius:var(--raio);
-    font-size:16px;      /* 16px evita o zoom automático do iPhone */
-    background:var(--cor-superficie);
-}
-
-.login-box input:focus{
-    outline:none;
-    border-color:var(--cor-primaria);
-    box-shadow:0 0 0 3px var(--cor-primaria-fundo);
-}
-
-.login-box button{
-    width:100%;
-    min-height:48px;
-    background:var(--cor-primaria);
-    border-color:var(--cor-primaria);
-    color:#ffffff;
-    font-size:15px;
-}
-
-.login-box button:hover{
-    background:var(--cor-primaria-hover);
-}
-
-.erro{
-    color:var(--cor-perigo);
-    margin-top:14px;
-    font-size:13px;
-}
-
-/* ===== 11. BUSCA E ABAS ================================================= */
-.campoBusca{
-    width:100%;
-    max-width:480px;
-    min-height:var(--altura-toque);
-    padding:10px 14px 10px 40px;
-    margin-bottom:var(--esp-4);
-    border:1px solid var(--cor-borda-forte);
-    border-radius:var(--raio);
-    font-size:16px;
-    background:var(--cor-superficie)
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%235c665f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E")
-        no-repeat 13px center;
-}
-
-.campoBusca:focus{
-    outline:none;
-    border-color:var(--cor-primaria);
-    box-shadow:0 0 0 3px var(--cor-primaria-fundo);
-}
-
-/* Abas (marketplace e dentro de formulário) */
+/* Abas antigas */
 .abasMarketplace,
 .abasFormulario{
     display:flex;
-    gap:4px;
+    gap:6px;
     overflow-x:auto;
-    margin-bottom:var(--esp-4);
-    border-bottom:1px solid var(--cor-borda);
+    margin-bottom:16px;
     scrollbar-width:none;
-}
-
-.abasMarketplace::-webkit-scrollbar,
-.abasFormulario::-webkit-scrollbar{
-    display:none;
 }
 
 .abaMarketplace,
 .abaFormulario{
     flex:none;
-    min-height:var(--altura-toque);
-    padding:10px 14px;
-    border:none;
-    border-bottom:2px solid transparent;
-    border-radius:0;
-    background:transparent;
-    font-size:14px;
-    font-weight:600;
-    color:var(--cor-texto-secundario);
-    cursor:pointer;
-    margin-bottom:-1px;
-    white-space:nowrap;
-}
-
-.abaMarketplace:hover,
-.abaFormulario:hover{
-    color:var(--cor-texto);
-    background:transparent;
-    border-color:var(--cor-borda-forte);
+    min-height:38px;
+    padding:7px 15px;
+    border-radius:var(--pilula);
+    border:1px solid var(--linha);
+    background:var(--superficie);
+    color:var(--texto-2);
+    font-size:13px;
+    font-weight:700;
 }
 
 .abaMarketplace.ativa,
 .abaFormulario.ativa{
-    color:var(--marca-verde);
-    border-color:var(--marca-dourado);
+    background:var(--marca);
+    border-color:var(--marca);
+    color:#ffffff;
 }
 
-/* ===== 12. PRODUTOS — GRADE E CARTÃO =================================== */
-
-/* Grade nova (Fase 2 vai usar esta). 2 colunas no celular, mais no PC. */
-.gradeProdutos{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0,1fr));
-    gap:var(--esp-3);
-}
-
+/* Cartões e carrossel antigos */
 .cartaoProduto,
 .cartaoProdutoPequeno{
-    background:var(--cor-superficie);
-    border:1px solid var(--cor-borda);
-    border-radius:var(--raio-grande);
-    box-shadow:var(--sombra-card);
+    background:var(--superficie);
+    border:1px solid var(--linha);
+    border-radius:var(--raio-g);
     overflow:hidden;
     display:flex;
     flex-direction:column;
-    transition:box-shadow .15s, border-color .15s;
 }
 
-.cartaoProduto:hover,
-.cartaoProdutoPequeno:hover{
-    border-color:var(--cor-borda-forte);
-    box-shadow:var(--sombra-elevada);
-}
-
-/* Produto inativo fica "apagadinho", mas ainda legível */
-.cartaoProduto.inativo .imagemProduto img{
-    filter:grayscale(.8);
-    opacity:.7;
+.cartaoProdutoPequeno{
+    flex:0 0 172px;
 }
 
 .imagemProduto{
-    width:100%;
-    aspect-ratio:1/1;
+    position:relative;
+    aspect-ratio:1;
     background:#ffffff;
     display:flex;
     align-items:center;
     justify-content:center;
     overflow:hidden;
-    position:relative;
-    border-bottom:1px solid var(--cor-borda);
 }
 
 .imagemProduto img{
@@ -880,7 +1577,7 @@ a.card:hover{
 
 .placeholderImagem{
     font-size:12px;
-    color:var(--cor-texto-terciario);
+    color:var(--texto-3);
 }
 
 .corpoProduto{
@@ -891,52 +1588,24 @@ a.card:hover{
     flex:1;
 }
 
-.idProduto{
-    font-size:11px;
-    color:var(--cor-texto-terciario);
-}
-
-/* Título com no máximo 2 linhas (o resto vira "...") */
-.tituloProduto{
-    font-size:13px;
-    font-weight:500;
-    line-height:1.35;
-    min-height:35px;
-    color:var(--cor-texto);
-    display:-webkit-box;
-    -webkit-line-clamp:2;
-    -webkit-box-orient:vertical;
-    overflow:hidden;
-}
-
-.precoAntigo{
-    font-size:12px;
-    color:var(--cor-texto-terciario);
-    text-decoration:line-through;
-}
-
-.precoProduto{
-    font-size:18px;
-    font-weight:700;
-    color:var(--marca-verde);
-}
+.idProduto{ font-size:11px; color:var(--texto-3); }
+.tituloProduto{ font-size:13px; font-weight:600; line-height:1.35; }
+.precoProduto{ font-size:17px; font-weight:800; }
 
 .acoesProduto{
     display:flex;
     gap:6px;
-    align-items:center;
     margin-top:auto;
     padding-top:8px;
 }
 
 .acoesProduto button{
     flex:1;
-    min-height:38px;
+    min-height:36px;
     padding:6px 8px;
-    font-size:13px;
+    font-size:12.5px;
 }
 
-/* Ícones em cima da foto (editar / excluir) — versão atual da tela */
 .acoesImagemProduto{
     position:absolute;
     top:6px;
@@ -944,142 +1613,49 @@ a.card:hover{
     right:6px;
     display:flex;
     justify-content:space-between;
-    z-index:2;
 }
 
 .acaoIconeProduto{
     width:34px;
     height:34px;
     min-height:34px;
-    border-radius:50%;
     padding:0;
-    border:1px solid var(--cor-borda);
-    background:rgba(255,255,255,.95);
-    color:var(--cor-texto);
-    box-shadow:var(--sombra-card);
-}
-
-.acaoIconeProduto:hover{
-    background:#ffffff;
-}
-
-.acaoIconeProduto.acaoExcluir{
-    color:var(--cor-perigo);
-}
-
-/* --- Carrossel antigo (ainda usado até a Fase 2 trocar pela grade) --- */
-.carrosselWrapper{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    margin-bottom:var(--esp-4);
-}
-
-.carrosselProdutos{
-    display:flex;
-    gap:var(--esp-3);
-    overflow-x:auto;
-    scroll-snap-type:x mandatory;
-    scroll-behavior:smooth;
-    flex:1;
-    padding-bottom:6px;
-    scrollbar-width:thin;
-}
-
-.carrosselProdutos::-webkit-scrollbar{
-    height:6px;
-}
-
-.carrosselProdutos::-webkit-scrollbar-thumb{
-    background:var(--cor-borda-forte);
-    border-radius:99px;
-}
-
-.botaoCarrossel{
-    flex-shrink:0;
-    width:36px;
-    height:36px;
-    min-height:36px;
     border-radius:50%;
-    padding:0;
-    font-size:18px;
-    line-height:1;
 }
 
-.botaoCarrossel:disabled{
-    opacity:.35;
-    cursor:not-allowed;
+.acaoIconeProduto.acaoExcluir{ color:var(--perigo); }
+
+.carrosselWrapper{ display:flex; align-items:center; gap:8px; margin-bottom:16px; }
+.carrosselProdutos{ display:flex; gap:12px; overflow-x:auto; flex:1; padding-bottom:6px; }
+.botaoCarrossel{ width:36px; height:36px; min-height:36px; padding:0; border-radius:50%; flex:none; }
+
+.gradeProdutos{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:10px;
 }
 
-.cartaoProdutoPequeno{
-    flex:0 0 180px;
-    width:180px;
-    scroll-snap-align:start;
-}
+.paginacaoLinhas{ display:flex; justify-content:center; gap:6px; margin-top:20px; flex-wrap:wrap; }
+.botaoPagina{ min-width:var(--toque); padding:0 12px; }
+.botaoPagina.ativa{ background:var(--marca); border-color:var(--marca); color:#fff; }
 
-.cartaoProdutoPequeno .corpoProduto{
-    gap:5px;
-}
-
-.cartaoProdutoPequeno .precoProduto{
-    font-size:16px;
-}
-
-.cartaoProdutoPequeno .acoesProduto{
-    flex-direction:column;
-}
-
-.cartaoProdutoPequeno .acoesProduto button{
-    width:100%;
-}
-
-/* Paginação (1, 2, 3, Seguinte ›) */
-.paginacaoLinhas{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:6px;
-    margin-top:var(--esp-5);
-    flex-wrap:wrap;
-}
-
-.botaoPagina{
-    min-width:var(--altura-toque);
-    padding:0 10px;
-    border-radius:var(--raio);
-    font-size:14px;
-    color:var(--cor-texto-secundario);
-}
-
-.botaoPagina.ativa{
-    border-color:var(--marca-verde);
-    color:var(--marca-creme);
-    background:var(--marca-verde);
-}
-
-.botaoPaginaSeguinte{
-    color:var(--cor-texto);
-}
-
-/* ===== 13. FORMULÁRIOS ================================================== */
+/* Formulários */
 .formulario{
-    background:var(--cor-superficie);
-    border:1px solid var(--cor-borda);
-    border-radius:var(--raio-grande);
+    background:var(--superficie);
+    border:1px solid var(--linha);
+    border-radius:var(--raio-g);
     padding:20px 16px;
-    box-shadow:var(--sombra-card);
     max-width:760px;
 }
 
 .campoFormulario{
-    margin-bottom:var(--esp-4);
+    margin-bottom:16px;
 }
 
 .campoFormulario label{
     display:block;
-    font-size:14px;
-    font-weight:600;
-    color:var(--cor-texto);
+    font-size:13.5px;
+    font-weight:700;
     margin-bottom:6px;
 }
 
@@ -1087,13 +1663,12 @@ a.card:hover{
 .campoFormulario select,
 .campoFormulario textarea{
     width:100%;
-    min-height:var(--altura-toque);
-    padding:10px 12px;
-    border:1px solid var(--cor-borda-forte);
+    min-height:var(--toque);
+    padding:10px 14px;
+    border:1px solid var(--linha-forte);
     border-radius:var(--raio);
-    font-size:16px;              /* 16px evita zoom no celular */
-    background:var(--cor-superficie);
-    color:var(--cor-texto);
+    background:var(--superficie);
+    font-size:16px;
 }
 
 .campoFormulario textarea{
@@ -1105,68 +1680,63 @@ a.card:hover{
 .campoFormulario select:focus,
 .campoFormulario textarea:focus{
     outline:none;
-    border-color:var(--cor-primaria);
-    box-shadow:0 0 0 3px var(--cor-primaria-fundo);
+    border-color:var(--marca);
+    box-shadow:0 0 0 3px #e3ebe6;
 }
 
-/* Texto de ajuda embaixo do campo */
 .campoFormulario small{
     display:block;
     font-size:12.5px;
-    color:var(--cor-texto-secundario);
+    color:var(--texto-2);
     margin-top:5px;
 }
 
 .campoFormulario input[type="file"]{
     min-height:auto;
-    padding:9px 0;
+    padding:8px 0;
     border:none;
-    background:none;
-    font-size:14px;
-    color:var(--cor-texto-secundario);
     box-shadow:none;
+    font-size:14px;
 }
 
 .linhaFormulario{
     display:grid;
-    grid-template-columns:1fr;   /* 1 coluna no celular */
-    gap:0 var(--esp-4);
+    grid-template-columns:1fr;
+    gap:0 16px;
 }
 
 .acoesFormulario{
     display:flex;
     gap:10px;
     align-items:center;
-    margin-top:var(--esp-2);
     flex-wrap:wrap;
+    margin-top:8px;
 }
 
 .mensagemFormulario{
     margin-top:12px;
     font-size:14px;
-    font-weight:500;
+    font-weight:600;
 }
 
-.mensagemFormulario.sucesso{ color:var(--cor-sucesso); }
-.mensagemFormulario.erro{ color:var(--cor-perigo); }
+.mensagemFormulario.sucesso{ color:var(--ok-texto); }
+.mensagemFormulario.erro{ color:var(--perigo-texto); }
 
 .avisoFormulario{
-    background:var(--cor-aviso-fundo);
-    color:#7f4f05;
+    background:var(--aviso-fundo);
+    color:var(--aviso-texto);
     padding:12px 14px;
     border-radius:var(--raio);
     font-size:14px;
-    margin-bottom:var(--esp-4);
-    border:1px solid #f3dcaa;
+    margin-bottom:16px;
 }
 
-/* Miniatura da foto no formulário */
 .pratinhaImagem{
     width:100%;
     max-width:180px;
-    aspect-ratio:1/1;
+    aspect-ratio:1;
     background:#ffffff;
-    border:1px solid var(--cor-borda);
+    border:1px solid var(--linha);
     border-radius:var(--raio);
     display:flex;
     align-items:center;
@@ -1181,47 +1751,30 @@ a.card:hover{
     object-fit:contain;
 }
 
-/* Campo de texto que cresce com o conteúdo (usado pelo expandivel.js) */
 .campoFormulario textarea.campoExpandivel,
 textarea.campoExpandivel{
     resize:none;
     overflow:hidden;
-    min-height:var(--altura-toque);
+    min-height:var(--toque);
     line-height:1.4;
 }
 
-/* ===== 14. IMPORTAÇÃO E LOGS ============================================ */
+/* Importação e logs */
 .cartaoResultadoImportacao{
-    background:var(--cor-superficie);
-    border:1px solid var(--cor-borda);
-    border-radius:var(--raio-grande);
+    background:var(--superficie);
+    border:1px solid var(--linha);
+    border-radius:var(--raio-g);
     padding:16px;
-    margin-bottom:14px;
-    box-shadow:var(--sombra-card);
-}
-
-.cartaoResultadoImportacao .tituloResultado{
-    font-size:15px;
-    font-weight:600;
-    margin-bottom:4px;
-}
-
-.cartaoResultadoImportacao .metaResultado{
-    font-size:13px;
-    color:var(--cor-texto-secundario);
-    margin-bottom:8px;
-}
-
-.cartaoResultadoImportacao .textoVendaResultado{
-    font-size:14px;
-    color:var(--cor-texto-secundario);
     margin-bottom:12px;
 }
 
-/* Caixa de log (mensagens linha por linha durante um processo) */
+.cartaoResultadoImportacao .tituloResultado{ font-size:15px; font-weight:700; margin-bottom:4px; }
+.cartaoResultadoImportacao .metaResultado{ font-size:13px; color:var(--texto-2); margin-bottom:8px; }
+.cartaoResultadoImportacao .textoVendaResultado{ font-size:14px; color:var(--texto-2); margin-bottom:12px; }
+
 .logAtividade{
-    background:var(--cor-superficie);
-    border:1px solid var(--cor-borda);
+    background:var(--superficie);
+    border:1px solid var(--linha);
     border-radius:var(--raio);
     padding:8px;
     max-height:340px;
@@ -1230,22 +1783,21 @@ textarea.campoExpandivel{
 
 .linhaLog{
     padding:8px 10px;
-    border-radius:8px;
+    border-radius:var(--raio-p);
     font-size:13px;
     line-height:1.4;
     margin-bottom:4px;
 }
 
-.linhaLog-info{ color:var(--cor-texto-secundario); }
-.linhaLog-sucesso{ background:var(--cor-sucesso-fundo); color:#17603a; }
-.linhaLog-erro{ background:var(--cor-perigo-fundo); color:#982a21; }
-.linhaLog-aviso{ background:var(--cor-aviso-fundo); color:#7f4f05; }
+.linhaLog-info{ color:var(--texto-2); }
+.linhaLog-sucesso{ background:var(--ok-fundo); color:var(--ok-texto); }
+.linhaLog-erro{ background:var(--perigo-fundo); color:var(--perigo-texto); }
+.linhaLog-aviso{ background:var(--aviso-fundo); color:var(--aviso-texto); }
 
-/* Blocos de prompt/resposta da IA (texto técnico) */
 .blocoPrompt{
-    background:var(--cor-superficie);
-    border:1px solid var(--cor-borda);
-    border-radius:var(--raio);
+    background:var(--superficie);
+    border:1px solid var(--linha);
+    border-radius:var(--raio-p);
     padding:10px 12px;
     margin-bottom:6px;
 }
@@ -1253,21 +1805,8 @@ textarea.campoExpandivel{
 .blocoPrompt summary{
     cursor:pointer;
     font-size:13px;
-    font-weight:600;
-    color:var(--cor-texto-secundario);
-    list-style:none;
-}
-
-.blocoPrompt summary::-webkit-details-marker{
-    display:none;
-}
-
-.blocoPrompt summary::before{
-    content:"› ";
-}
-
-.blocoPrompt[open] summary::before{
-    content:"⌄ ";
+    font-weight:700;
+    color:var(--texto-2);
 }
 
 .blocoPrompt pre,
@@ -1278,131 +1817,37 @@ textarea.campoExpandivel{
     word-break:break-word;
     max-height:220px;
     overflow-y:auto;
-    border-radius:8px;
 }
 
 .blocoPrompt pre{
     margin-top:8px;
-    color:var(--cor-texto);
-    background:var(--cor-superficie-2);
+    background:var(--superficie-2);
     padding:10px;
+    border-radius:8px;
 }
 
 .blocoResposta{
-    background:var(--cor-superficie);
-    border:1px solid var(--cor-borda);
+    border:1px solid var(--linha);
+    border-radius:var(--raio-p);
     padding:10px 12px;
-    color:var(--cor-texto-secundario);
+    color:var(--texto-2);
     margin-bottom:6px;
 }
 
-/* ===== 15. TABELAS QUE VIRAM CARDS NO CELULAR =========================== */
-/* Uso: <table class="tabela"> e em cada <td data-rotulo="Preço">.
-   No celular, cada linha vira um card e o rótulo aparece antes do valor. */
-.tabela{
-    width:100%;
-    border-collapse:collapse;
-    background:var(--cor-superficie);
-    border:1px solid var(--cor-borda);
-    border-radius:var(--raio-grande);
-    overflow:hidden;
-    font-size:14px;
-}
-
-.tabela th{
-    text-align:left;
-    font-size:12px;
-    font-weight:600;
-    color:var(--cor-texto-secundario);
-    background:var(--cor-superficie-2);
-    padding:10px 12px;
-    border-bottom:1px solid var(--cor-borda);
-}
-
-.tabela td{
-    padding:12px;
-    border-bottom:1px solid var(--cor-borda);
-    vertical-align:middle;
-}
-
-.tabela tr:last-child td{
-    border-bottom:none;
-}
-
-/* ===== 16. CELULAR (até 600px) ========================================== */
-@media (max-width:600px){
-
-    h1{
-        font-size:23px;
-    }
-
-    .card p{
-        font-size:24px;
-    }
-
-    .cartaoProdutoPequeno{
-        flex-basis:44vw;
-        width:44vw;
-    }
-
-    .botaoCarrossel{
-        display:none;          /* no celular a gente rola com o dedo */
-    }
-
-    /* Tabela -> cards */
-    .tabela, .tabela tbody, .tabela tr, .tabela td{
-        display:block;
-        width:100%;
-    }
-
-    .tabela{
-        border:none;
-        background:transparent;
-    }
-
-    .tabela thead{
-        display:none;
-    }
-
-    .tabela tr{
-        background:var(--cor-superficie);
-        border:1px solid var(--cor-borda);
-        border-radius:var(--raio-grande);
-        margin-bottom:var(--esp-3);
-        padding:6px 0;
-    }
-
-    .tabela td{
-        display:flex;
-        justify-content:space-between;
-        gap:12px;
-        border-bottom:none;
-        padding:6px 14px;
-    }
-
-    .tabela td::before{
-        content:attr(data-rotulo);
-        font-size:12px;
-        font-weight:600;
-        color:var(--cor-texto-secundario);
-    }
-
-}
-
-/* ===== 17. TABLET (a partir de 601px) =================================== */
+/* ===== 7. TABLET (a partir de 601px) ==================================== */
 @media (min-width:601px){
 
     main{
-        padding:76px 24px 48px;
+        padding:28px 24px calc(var(--altura-nav-baixo) + 32px);
     }
 
-    .cards{
-        grid-template-columns:repeat(3, minmax(0,1fr));
+    .numeros, .cards{
+        grid-template-columns:repeat(4, minmax(0,1fr));
     }
 
-    .gradeProdutos{
+    .gradeOfertas, .gradeProdutos{
         grid-template-columns:repeat(3, minmax(0,1fr));
-        gap:var(--esp-4);
+        gap:20px 14px;
     }
 
     .linhaFormulario{
@@ -1413,35 +1858,359 @@ textarea.campoExpandivel{
         padding:24px;
     }
 
-}
-
-/* ===== 18. PC (a partir de 1024px): menu sempre aberto ================== */
-@media (min-width:1024px){
-
-    .sidebar{
-        transform:none;
-        box-shadow:none;
+    /* A folha vira uma janela no meio da tela */
+    .fundoFolha{
+        align-items:center;
+        padding:24px;
     }
 
-    .botaoMenu,
-    .overlayMenu,
-    .overlayMenu.ativo{
+    .folha{
+        border-radius:24px;
+        padding:20px 24px 24px;
+        transform:translateY(20px) scale(.98);
+        opacity:0;
+        transition:transform .2s, opacity .2s;
+    }
+
+    .fundoFolha.aberta .folha{
+        transform:none;
+        opacity:1;
+    }
+
+    .alcaFolha{
         display:none;
     }
 
-    /* Empurra o conteúdo para a direita do menu */
+    .listaChips, .fileiraMini{
+        margin:0;
+        padding-left:0;
+        padding-right:0;
+    }
+
+}
+
+/* ===== 8. PC (a partir de 1024px): barra no topo ======================== */
+@media (min-width:1024px){
+
+    .navBaixo{
+        display:none;
+    }
+
+    .navTopo{
+        position:sticky;
+        top:0;
+        z-index:900;
+        display:flex;
+        align-items:center;
+        gap:28px;
+        height:var(--altura-nav-topo);
+        padding:0 32px;
+        background:rgba(255,255,255,.96);
+        backdrop-filter:blur(10px);
+        border-bottom:1px solid var(--linha);
+    }
+
+    .navTopo .linksTopo{
+        display:flex;
+        gap:4px;
+        height:100%;
+    }
+
+    .navTopo .linksTopo a,
+    .navTopo .linksTopo button{
+        display:flex;
+        align-items:center;
+        gap:8px;
+        height:100%;
+        min-height:auto;
+        padding:0 14px;
+        border:none;
+        border-radius:0;
+        border-bottom:2px solid transparent;
+        background:none;
+        color:var(--texto-2);
+        font-size:14px;
+        font-weight:600;
+        text-decoration:none;
+    }
+
+    .navTopo .linksTopo a:hover,
+    .navTopo .linksTopo button:hover{
+        color:var(--texto);
+        background:none;
+    }
+
+    .navTopo .linksTopo .ativo{
+        color:var(--texto);
+        border-bottom-color:var(--marca);
+    }
+
+    .navTopo .linksTopo svg{
+        width:18px;
+        height:18px;
+    }
+
+    .navTopo .direitaTopo{
+        margin-left:auto;
+        display:flex;
+        align-items:center;
+        gap:10px;
+    }
+
+    /* Pílula de status do robô na barra do topo */
+    .statusTopo{
+        display:inline-flex;
+        align-items:center;
+        gap:7px;
+        font-size:12.5px;
+        font-weight:700;
+        padding:6px 12px;
+        border-radius:var(--pilula);
+        background:var(--superficie-2);
+        color:var(--texto-2);
+        text-decoration:none;
+    }
+
+    .statusTopo::before{
+        content:"";
+        width:8px;
+        height:8px;
+        border-radius:50%;
+        background:var(--texto-3);
+    }
+
+    .statusTopo.online{ background:var(--ok-fundo); color:var(--ok-texto); }
+    .statusTopo.online::before{ background:var(--ok); }
+    .statusTopo.pausado{ background:var(--aviso-fundo); color:var(--aviso-texto); }
+    .statusTopo.pausado::before{ background:var(--aviso); }
+
     main{
-        margin-left:var(--largura-menu);
-        padding:32px 32px 56px;
-        max-width:calc(1200px + var(--largura-menu));
+        padding:32px 32px 64px;
     }
 
-    .login-page{
-        margin-left:0;
+    .toast{
+        bottom:24px;
     }
 
-    .gradeProdutos{
-        grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
+    h1{
+        font-size:30px;
     }
 
+    .gradeOfertas, .gradeProdutos{
+        grid-template-columns:repeat(auto-fill, minmax(170px, 1fr));
+        gap:24px 18px;
+    }
+
+    /* Início no PC: duas colunas */
+    .colunasInicio{
+        display:grid;
+        grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);
+        gap:24px;
+        align-items:start;
+    }
+
+    .colunasInicio .tituloSecao:first-child{
+        margin-top:0;
+    }
+
+    /* Ofertas no PC: filtros fixos à esquerda */
+    .layoutOfertas{
+        display:grid;
+        grid-template-columns:220px minmax(0,1fr);
+        gap:32px;
+        align-items:start;
+    }
+
+    .filtrosLaterais{
+        display:block !important;
+        position:sticky;
+        top:calc(var(--altura-nav-topo) + 24px);
+    }
+
+    .soCelular{
+        display:none !important;
+    }
+
+}
+
+/* Filtros laterais só aparecem no PC */
+.filtrosLaterais{
+    display:none;
+}
+
+.filtrosLaterais .grupoFiltro{
+    margin-bottom:24px;
+}
+
+.filtrosLaterais .opcoes{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+
+/* Opção de filtro em lista (PC) */
+.opcaoLista{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    width:100%;
+    min-height:38px;
+    padding:6px 12px;
+    border:none;
+    border-radius:var(--raio-p);
+    background:none;
+    color:var(--texto-2);
+    font-size:14px;
+    font-weight:600;
+    text-align:left;
+}
+
+.opcaoLista:hover{
+    background:rgba(15,26,20,.05);
+    color:var(--texto);
+}
+
+.opcaoLista.ativo{
+    background:#e3ebe6;
+    color:var(--marca);
+}
+
+.opcaoLista .contador{
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--texto-3);
+}
+
+/* Some com a animação para quem pediu "menos movimento" no celular */
+@media (prefers-reduced-motion:reduce){
+    *{
+        transition:none !important;
+        animation:none !important;
+    }
+}
+
+/* ===== 9. PEQUENOS AJUSTES ============================================== */
+
+/* Texto que só aparece no PC (ex.: "Nova oferta" ao lado do +) */
+.soPC{
+    display:none;
+}
+
+@media (min-width:1024px){
+    .soPC{
+        display:inline;
+    }
+}
+
+/* No celular o botão "+" fica redondo, só com o ícone */
+@media (max-width:1023px){
+    #btnNovaOferta{
+        width:var(--toque);
+        padding:0;
+    }
+}
+
+/* Seletor de ordem pequeno (Mais recentes / Maior desconto...) */
+.seletorOrdem{
+    min-height:34px;
+    padding:4px 30px 4px 12px;
+    border:1px solid var(--linha);
+    border-radius:var(--pilula);
+    background:var(--superficie)
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235b6560' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+        no-repeat right 10px center;
+    font-size:13px;
+    font-weight:600;
+    color:var(--texto);
+    appearance:none;
+    -webkit-appearance:none;
+    cursor:pointer;
+}
+
+/* Botão desabilitado dentro das ações da folha */
+.gradeAcoes button:disabled{
+    cursor:not-allowed;
+    opacity:.45;
+}
+
+/* Cartões de grupo (página Grupos) */
+.cartaoGrupo{
+    background:var(--superficie);
+    border:1px solid var(--linha);
+    border-radius:var(--raio-g);
+    padding:18px;
+}
+
+.cartaoGrupo .topoGrupo{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:14px;
+}
+
+.cartaoGrupo .topoGrupo strong{
+    display:block;
+    font-size:16px;
+}
+
+.cartaoGrupo .topoGrupo small{
+    color:var(--texto-2);
+    font-size:13px;
+}
+
+.dadosGrupo{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:10px;
+    margin-bottom:14px;
+}
+
+.dadosGrupo div{
+    background:var(--superficie-2);
+    border-radius:var(--raio);
+    padding:10px 12px;
+}
+
+.dadosGrupo span{
+    display:block;
+    font-size:12px;
+    color:var(--texto-2);
+    font-weight:600;
+}
+
+.dadosGrupo strong{
+    font-size:15px;
+}
+
+.blocoEmBreve{
+    margin-top:16px;
+    padding:18px;
+    border:1px dashed var(--linha-forte);
+    border-radius:var(--raio-g);
+    color:var(--texto-2);
+    font-size:14px;
+}
+
+.blocoEmBreve strong{
+    display:block;
+    color:var(--texto);
+    font-size:15px;
+    margin-bottom:4px;
+}
+
+@media (min-width:1024px){
+    .gradeGrupos{
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0,1fr));
+        gap:16px;
+        align-items:start;
+    }
+}
+
+.login-box .erro{
+    margin:14px 0 0;
+}
+
+.login-box .erro:empty{
+    display:none;
 }

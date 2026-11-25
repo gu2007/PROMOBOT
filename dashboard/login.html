@@ -1,46 +1,45 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-
     <meta charset="UTF-8">
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>PROMOBOT - Login</title>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0d2217">
+    <title>Entrar - I Ama Promos</title>
     <link rel="stylesheet" href="assets/css/style.css">
-
 </head>
-
 <body>
 
     <main class="login-page">
 
         <div class="login-box">
 
-            <h2>PROMOBOT</h2>
+            <!-- Ícone da marca (sacola com coração) -->
+            <span class="iconeMarca" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/><path d="M12 17.5s-2.5-1.5-2.5-3.1a1.3 1.3 0 0 1 2.5-.6 1.3 1.3 0 0 1 2.5.6c0 1.6-2.5 3.1-2.5 3.1Z"/></svg>
+            </span>
 
-            <p>Entre com seu usuário e senha</p>
+            <h2>I Ama Promos</h2>
+            <p>Entre para gerenciar as ofertas do robô.</p>
 
+            <!-- Os ids (formLogin, usuario, senha, erroLogin) são usados pelo login.js -->
             <form id="formLogin">
 
-                <input type="text" id="usuario" placeholder="Usuário" required>
+                <label for="usuario">Usuário</label>
+                <input type="text" id="usuario" autocomplete="username" autocapitalize="none" required>
 
-                <input type="password" id="senha" placeholder="Senha" required>
+                <label for="senha">Senha</label>
+                <input type="password" id="senha" autocomplete="current-password" required>
 
                 <button type="submit">Entrar</button>
 
             </form>
 
-            <p id="erroLogin" class="erro"></p>
+            <p id="erroLogin" class="erro" role="alert"></p>
 
         </div>
 
     </main>
 
     <script src="assets/js/login.js"></script>
-
 </body>
-
 </html>

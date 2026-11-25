@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0d2217">
+    <title>Grupos - I Ama Promos</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+    <main>
+
+        <div class="cabecalhoPagina">
+            <div>
+                <h1>Grupos</h1>
+                <p class="subtitulo">Grupos de WhatsApp onde o robô posta as ofertas.</p>
+            </div>
+        </div>
+
+        <div class="gradeGrupos">
+
+            <!-- Grupo atual (preenchido pelo grupos.js) -->
+            <section class="cartaoGrupo" id="cartaoGrupoAtual">
+                <div class="carregando" style="height:160px;"></div>
+            </section>
+
+            <!-- Explicação do que vem por aí -->
+            <section class="blocoEmBreve">
+                <strong>Em breve: vários grupos</strong>
+                Cada grupo vai poder ter suas próprias categorias, horário e quantidade de postagens.
+                Por exemplo: "I Ama Promos Ferramentas" só com ferramentas e "I Ama Promos Casa" só com casa.
+                Essa parte depende de uma atualização no servidor.
+            </section>
+
+        </div>
+
+    </main>
+
+    <script src="assets/js/menu.js"></script>
+    <script src="assets/js/grupos.js"></script>
+</body>
+</html>
