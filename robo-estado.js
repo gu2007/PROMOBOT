@@ -120,7 +120,14 @@ async function resumo() {
 
 function obterLigacoes() { return ligacoes; }
 
+// Para as rotas de grupos: contador de hoje + config atual.
+function lerEstado() {
+  const e = ler();
+  return { postadasHoje: e.data === dataLocal() ? e.contador : 0, ultimaPostagem: e.ultimaPostagem };
+}
+
 module.exports = {
   configurar, obterLigacoes, registrarPostagem, definirAgendados,
-  definirConectado, resumo, proximaPostagem, estadoWhatsApp
+  definirConectado, resumo, proximaPostagem, estadoWhatsApp,
+  lerEstado, lerConfig: carregarConfig
 };

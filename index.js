@@ -30,6 +30,8 @@ const { importarColetor } = require('./importador-coletor');
 const { aplicarRevisoes } = require('./revisor-aplicar');
 const roboEstado = require('./robo-estado');
 const roboRoutes = require('./routes/robo');
+const gruposCadastro = require('./grupos');
+const gruposRoutes = require('./routes/grupos');
 
 // ======= CONFIGURAÇÕES =======
 // Cole aqui o ID do grupo. Para descobrir o ID, rode: npm run listar-grupos
@@ -730,7 +732,11 @@ app.get('/login', (req, res) => {
     app.use('/api/config', configRoute);
     // Ligações do painel com o robô (resumo + "Postar agora")
     roboEstado.configurar({ client, enviarProduto, enfileirar, comTimeout, groupId: GROUP_ID });
+    gruposCadastro.definirPrincipal(GROUP_ID);
     app.use('/api/robo', roboRoutes.robo);
+    app.use('/api/grupos', gruposRoutes.grupos);
+    app.use('/api/whatsapp', gruposRoutes.whatsapp);
+    app.use('/api/categorias', gruposRoutes.categorias);
     app.use('/api/produtos', roboRoutes.produtosExtra);
     app.use('/api/produtos', produtosRoute);
     app.use('/api/auth', authRoute);

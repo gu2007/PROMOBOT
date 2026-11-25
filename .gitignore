@@ -44,3 +44,6 @@ products.pre-banco.json
 
 # Estado do robo (contador do dia)
 estado-robo.json
+grupos.json
+grupos.json.tmp
+config.json.tmp
