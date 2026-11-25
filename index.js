@@ -28,6 +28,8 @@ const scheduler = require('./scheduler');
 const convite = require('./convite');
 const { importarColetor } = require('./importador-coletor');
 const { aplicarRevisoes } = require('./revisor-aplicar');
+const roboEstado = require('./robo-estado');
+const roboRoutes = require('./routes/robo');
 
 // ======= CONFIGURAÇÕES =======
 // Cole aqui o ID do grupo. Para descobrir o ID, rode: npm run listar-grupos
@@ -375,6 +377,8 @@ async function enviarProximaOferta() {
     console.error('⚠️ A mensagem foi enviada, mas não consegui registrar o envio no products.json:', erro.message);
   }
 
+  try { roboEstado.registrarPostagem(); } catch (_) {}
+
   return produto;
 }
 
@@ -490,6 +494,7 @@ client.on('qr', (qr) => {
 function agendarEnviosDaHora(client) {
 
   scheduler.limpar();
+  roboEstado.definirAgendados([]);
 
   const config = carregarConfig();
 
@@ -518,6 +523,7 @@ function agendarEnviosDaHora(client) {
   // Divide os 60 minutos da hora em N faixas e escolhe um minuto aleatório
   // dentro de cada faixa, para os envios não saírem todos juntos.
   const faixaMin = Math.floor(60 / n);
+  const horariosAgendados = [];
 
   for (let i = 0; i < n; i++) {
     const minutoBase = i * faixaMin;
@@ -529,7 +535,10 @@ function agendarEnviosDaHora(client) {
     }, delayMs);
 
     scheduler.adicionar(timeout);
+    horariosAgendados.push(Date.now() + delayMs);
   }
+
+  roboEstado.definirAgendados(horariosAgendados);
 }
 
 // O evento "ready" pode disparar mais de uma vez (o WhatsApp Web às vezes
@@ -649,7 +658,7 @@ if (USAR_N8N) {
 
     function requireLogin(req, res, next) {
 
-      const rotasPublicas = ['/login.html', '/api/auth/login', '/send'];
+      const rotasPublicas = ['/login', '/login.html', '/api/auth/login', '/send'];
       const isAsset = req.path.startsWith('/assets/');
 
       if (rotasPublicas.includes(req.path) || isAsset) return next();
@@ -708,9 +717,21 @@ app.get('/alteracoes', (req, res) => {
     res.sendFile(path.join(__dirname, 'dashboard', 'alteracoes.html'));
 });
 
+app.get('/grupos', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dashboard', 'grupos.html'));
+});
+
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dashboard', 'login.html'));
+});
+
 
     app.use('/api/dashboard', dashboardRoute);
     app.use('/api/config', configRoute);
+    // Ligações do painel com o robô (resumo + "Postar agora")
+    roboEstado.configurar({ client, enviarProduto, enfileirar, comTimeout, groupId: GROUP_ID });
+    app.use('/api/robo', roboRoutes.robo);
+    app.use('/api/produtos', roboRoutes.produtosExtra);
     app.use('/api/produtos', produtosRoute);
     app.use('/api/auth', authRoute);
     app.use('/api/ia', iaRoute);
@@ -760,7 +781,10 @@ servidor.on("error", (erro) => {
   }
 });
 
+client.on('ready', () => roboEstado.definirConectado(true));
+
 client.on('disconnected', (reason) => {
+  roboEstado.definirConectado(false);
   console.log('Cliente desconectado:', reason);
   reiniciarProcesso(`WhatsApp desconectado (${reason})`);
 });

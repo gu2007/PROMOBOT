@@ -90,10 +90,12 @@ const pausa = () => esperar(aleatorio(CONFIG.pausaMinMs, CONFIG.pausaMaxMs));
 const agora = () => new Date().toLocaleTimeString('pt-BR');
 const log = (...a) => console.log(`[${agora()}]`, ...a);
 
+let humanoEsperando = false; // true enquanto o robô espera você resolver captcha/login
 function perguntarEnter(mensagem) {
   process.stdout.write('\x07\x07\x07'); // apita para chamar sua atenção
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => rl.question('\n👉 ' + mensagem + '\n   (depois aperte ENTER aqui) ', () => { rl.close(); resolve(); }));
+  humanoEsperando = true;
+  return new Promise((resolve) => rl.question('\n👉 ' + mensagem + '\n   (depois aperte ENTER aqui) ', () => { humanoEsperando = false; rl.close(); resolve(); }));
 }
 
 function precisaHumano(url) {
@@ -239,9 +241,53 @@ async function linkPeloPainel(page, urlProduto) {
 }
 
 // ---------- uma rodada ----------
+const LIMITE_PRODUTO_MS = Number(process.env.COLETOR_LIMITE_MS) || 150000; // máximo por produto (sem contar o tempo de captcha)
+const LOTE_ENVIO = Number(process.env.COLETOR_LOTE) || 20; // envia ao servidor a cada N produtos com link (nada fica preso no PC)
+
+// Roda uma tarefa com prazo. O prazo "pausa" enquanto o robô espera VOCÊ resolver um captcha.
+function comLimite(promessa, ms, mensagem) {
+  return new Promise((resolve, reject) => {
+    let restante = ms;
+    const t = setInterval(() => {
+      if (humanoEsperando) return;
+      restante -= 1000;
+      if (restante <= 0) { clearInterval(t); reject(new Error(mensagem)); }
+    }, 1000);
+    promessa.then((v) => { clearInterval(t); resolve(v); }, (e) => { clearInterval(t); reject(e); });
+  });
+}
+
 async function rodada(browser, meta) {
-  const page = await browser.newPage();
+  let page = await browser.newPage();
   const resultado = [];
+  const naoEnviados = [];
+  let enviados = 0;
+
+  // guarda uma cópia do arquivo da rodada anterior, se existir (nunca perde coleta antiga)
+  try {
+    if (fs.existsSync(SAIDA)) {
+      fs.mkdirSync(LOTES, { recursive: true });
+      fs.copyFileSync(SAIDA, path.join(LOTES, `resultado-anterior-${Date.now()}.json`));
+    }
+  } catch (_) {}
+
+  const enviarPendentes = async (forcar) => {
+    if (!naoEnviados.length || (!forcar && naoEnviados.length < LOTE_ENVIO)) return;
+    const lote = naoEnviados.slice();
+    try {
+      const nome = await enviarLote(lote);
+      naoEnviados.splice(0, lote.length);
+      enviados += lote.length;
+      log(`📤 ${lote.length} produto(s) enviado(s) ao servidor (${nome}). Em até 5 min entram no sistema.`);
+    } catch (e) {
+      log(`⚠️ Não consegui enviar agora (${e.message}). Tento de novo no próximo lote.`);
+    }
+  };
+  const novaAba = async () => {
+    try { await page.close(); } catch (_) {}
+    page = await browser.newPage();
+  };
+
   try {
     if (!(await abrir(page, URL_PAINEL, 'Entre no Mercado Livre com a conta de AFILIADO na janela do Chrome.'))) {
       throw new Error('Não consegui abrir o painel de afiliados (login/captcha não resolvido).');
@@ -250,7 +296,7 @@ async function rodada(browser, meta) {
     const vistos = new Set();
     let candidatos = [];
 
-    // sorteia buscas/páginas até juntar candidatos suficientes (máx. 4 buscas)
+    // sorteia buscas/páginas até juntar candidatos suficientes e variados
     const buscas = [...CONFIG.buscas].sort(() => Math.random() - 0.5);
     const maxBuscas = Math.max(6, Math.ceil(meta / 6));
     let feitas = 0;
@@ -261,20 +307,25 @@ async function rodada(browser, meta) {
       const urlBusca = `https://lista.mercadolivre.com.br/${busca}${desde}_Discount_${CONFIG.descontoMin}-100_NoIndex_True`;
       log(`🔎 Buscando "${busca}" (página ${pag})`);
       feitas++;
-      if (!(await abrir(page, urlBusca, 'Captcha na busca. Resolva na janela do Chrome.'))) continue;
-      await esperar(2500);
-      const lidos = await lerBusca(page);
-      for (const p of lidos) {
-        const id = idDoLink(p.url);
-        if (!id || vistos.has(id) || jaTem.ids.has(id)) continue;
-        vistos.add(id);
-        if (!p.preco || !p.precoAntigo || p.precoAntigo <= p.preco) continue;
-        if ((p.desconto || 0) < CONFIG.descontoMin) continue;
-        if (p.avaliacao && p.avaliacao < CONFIG.avaliacaoMin) continue;
-        if (!tituloDoNicho(p.titulo)) continue;
-        candidatos.push(p);
+      try {
+        if (!(await abrir(page, urlBusca, 'Captcha na busca. Resolva na janela do Chrome.'))) continue;
+        await esperar(2500);
+        const lidos = await lerBusca(page);
+        for (const p of lidos) {
+          const id = idDoLink(p.url);
+          if (!id || vistos.has(id) || jaTem.ids.has(id)) continue;
+          vistos.add(id);
+          if (!p.preco || !p.precoAntigo || p.precoAntigo <= p.preco) continue;
+          if ((p.desconto || 0) < CONFIG.descontoMin) continue;
+          if (p.avaliacao && p.avaliacao < CONFIG.avaliacaoMin) continue;
+          if (!tituloDoNicho(p.titulo)) continue;
+          candidatos.push(p);
+        }
+        log(`   ${lidos.length} produtos na página; candidatos novos até agora: ${candidatos.length}`);
+      } catch (e) {
+        log(`   ⚠️ Essa busca falhou (${e.message}). Sigo para a próxima.`);
+        await novaAba();
       }
-      log(`   ${lidos.length} produtos na página; candidatos novos até agora: ${candidatos.length}`);
       await pausa();
     }
 
@@ -282,78 +333,116 @@ async function rodada(browser, meta) {
     const porGrupo = {};
     const capGrupo = Math.max(5, Math.round(meta * 0.15));
     log(`🧮 ${candidatos.length} candidatos de ${new Set(candidatos.map((c) => grupoDe(c.titulo))).size} tipos. Limite de ${capGrupo} por tipo nesta rodada.`);
+
+    let falhasLink = 0;
     for (const p of candidatos) {
       if (resultado.filter((r) => r.linkAfiliado).length >= meta) break;
       const g = grupoDe(p.titulo);
       if ((porGrupo[g] || 0) >= capGrupo) continue;
       log('➡️  ' + p.titulo.slice(0, 70));
-      await pausa();
-      if (!(await abrir(page, p.url, 'Captcha/login na página do produto. Resolva na janela do Chrome.'))) continue;
-      await esperar(2000);
-      await page.waitForFunction(() => /GANHOS/i.test((document.querySelector('.toolbar__actions') || {}).innerText || ''),
-        { timeout: 6000 }).catch(() => {});
 
-      const extra = await page.evaluate(() => {
-        const barra = (document.querySelector('.toolbar__actions') || {}).innerText || '';
-        const g = barra.match(/GANHOS\s*(\d+(?:[.,]\d+)?)\s*%/i);
-        const og = document.querySelector('meta[property="og:image"]');
-        const h1 = document.querySelector('h1');
-        const din = (el) => {
-          if (!el) return null;
-          const fr = el.querySelector('.andes-money-amount__fraction');
-          if (!fr) return null;
-          const inteiro = fr.innerText.replace(/\D/g, '');
-          if (!inteiro) return null;
-          const ce = el.querySelector('.andes-money-amount__cents');
-          return Number(inteiro + '.' + (ce ? ce.innerText.replace(/\D/g, '').padEnd(2, '0').slice(0, 2) : '00'));
-        };
-        const corpo = document.body ? document.body.innerText : '';
-        const ogImg = og ? og.content : '';
+      // Tudo que é feito em UM produto fica aqui dentro. Se der erro ou demorar demais,
+      // só este produto é pulado (antes, um erro derrubava a rodada inteira).
+      const processar = async () => {
+        await pausa();
+        if (!(await abrir(page, p.url, 'Captcha/login na página do produto. Resolva na janela do Chrome.'))) return { pular: 'não consegui abrir a página' };
+        await esperar(2000);
+        await page.waitForFunction(() => /GANHOS/i.test((document.querySelector('.toolbar__actions') || {}).innerText || ''),
+          { timeout: 6000 }).catch(() => {});
+
+        const extra = await page.evaluate(() => {
+          const barra = (document.querySelector('.toolbar__actions') || {}).innerText || '';
+          const gn = barra.match(/GANHOS\s*(\d+(?:[.,]\d+)?)\s*%/i);
+          const og = document.querySelector('meta[property="og:image"]');
+          const h1 = document.querySelector('h1');
+          const din = (el) => {
+            if (!el) return null;
+            const fr = el.querySelector('.andes-money-amount__fraction');
+            if (!fr) return null;
+            const inteiro = fr.innerText.replace(/\D/g, '');
+            if (!inteiro) return null;
+            const ce = el.querySelector('.andes-money-amount__cents');
+            return Number(inteiro + '.' + (ce ? ce.innerText.replace(/\D/g, '').padEnd(2, '0').slice(0, 2) : '00'));
+          };
+          const corpo = document.body ? document.body.innerText : '';
+          const ogImg = og ? og.content : '';
+          return {
+            ganho: gn ? parseFloat(gn[1].replace(',', '.')) : null, imagem: og ? og.content : null, titulo: h1 ? h1.innerText.trim() : null,
+            preco: din(document.querySelector('.ui-pdp-price__second-line .andes-money-amount')),
+            precoAntigo: din(document.querySelector('.ui-pdp-price__original-value')),
+            internacional: /CBT\d{6,}/.test(ogImg) || /\bEnvio de (China|Hong Kong|Estados Unidos|EUA|Exterior)\b/i.test(corpo) || /compra internacional|produto internacional|do exterior/i.test(corpo),
+          };
+        });
+
+        // Confere na PRÓPRIA página do produto (o preço da lista de busca pode estar errado)
+        if (extra.internacional) return { pular: 'produto internacional: ignorado.' };
+        if (!(extra.preco && extra.precoAntigo && extra.precoAntigo > extra.preco)) return { pular: 'sem desconto real na página: ignorado.' };
+        const preco = extra.preco;
+        const precoAntigo = extra.precoAntigo;
+        const desconto = Math.round((1 - preco / precoAntigo) * 100);
+        if (desconto < CONFIG.descontoMin || desconto > CONFIG.descontoMax) {
+          return { pular: `desconto real ${desconto}% fora de ${CONFIG.descontoMin}-${CONFIG.descontoMax}%: ignorado.` };
+        }
+
+        let link = await linkPelaBarra(page);
+        let via = 'barra';
+        if (!link && falhasLink < 2) { // se já está falhando em sequência, não gasta tempo com a reserva
+          log('   ⚠️ A barra não deu o link. Tentando pelo painel...');
+          link = await linkPeloPainel(page, p.url);
+          via = 'painel';
+        }
         return {
-          ganho: g ? parseFloat(g[1].replace(',', '.')) : null, imagem: og ? og.content : null, titulo: h1 ? h1.innerText.trim() : null,
-          preco: din(document.querySelector('.ui-pdp-price__second-line .andes-money-amount')),
-          precoAntigo: din(document.querySelector('.ui-pdp-price__original-value')),
-          internacional: /CBT\d{6,}/.test(ogImg) || /\bEnvio de (China|Hong Kong|Estados Unidos|EUA|Exterior)\b/i.test(corpo) || /compra internacional|produto internacional|do exterior/i.test(corpo),
+          link, via,
+          item: {
+            marketplace: 'mercadolivre',
+            titulo: extra.titulo || p.titulo,
+            preco, precoAntigo, desconto,
+            avaliacao: p.avaliacao, vendidos: p.vendidos,
+            ganhoPercentual: extra.ganho, imagem: extra.imagem,
+            linkOriginal: p.url, linkAfiliado: link,
+            via: link ? via : null, status: link ? 'ok' : 'revisar',
+            coletadoEm: new Date().toISOString(),
+          },
         };
-      });
+      };
 
-      // Confere na PRÓPRIA página do produto (o preço da lista de busca pode estar errado)
-      if (extra.internacional) { log('   ⏭️ Produto internacional: ignorado.'); continue; }
-      if (!(extra.preco && extra.precoAntigo && extra.precoAntigo > extra.preco)) { log('   ⏭️ Sem desconto real na página: ignorado.'); continue; }
-      p.preco = extra.preco;
-      p.precoAntigo = extra.precoAntigo;
-      p.desconto = Math.round((1 - extra.preco / extra.precoAntigo) * 100);
-      if (p.desconto < CONFIG.descontoMin || p.desconto > CONFIG.descontoMax) {
-        log(`   ⏭️ Desconto real ${p.desconto}% fora de ${CONFIG.descontoMin}-${CONFIG.descontoMax}%: ignorado.`);
+      let r;
+      const tarefa = processar();
+      tarefa.catch(() => {}); // se estourar o prazo, o erro tardio não deve derrubar nada
+      try {
+        r = await comLimite(tarefa, LIMITE_PRODUTO_MS, 'demorou demais');
+      } catch (e) {
+        log(`   ⚠️ Pulei este produto (${e.message}). Abrindo uma aba nova...`);
+        await novaAba();
         continue;
       }
+      if (r.pular) { log('   ⏭️ ' + r.pular); continue; }
 
-      let link = await linkPelaBarra(page);
-      let via = 'barra';
-      if (!link) {
-        log('   ⚠️ A barra não deu o link. Tentando pelo painel...');
-        link = await linkPeloPainel(page, p.url);
-        via = 'painel';
-      }
-      resultado.push({
-        marketplace: 'mercadolivre',
-        titulo: extra.titulo || p.titulo,
-        preco: p.preco, precoAntigo: p.precoAntigo, desconto: p.desconto,
-        avaliacao: p.avaliacao, vendidos: p.vendidos,
-        ganhoPercentual: extra.ganho, imagem: extra.imagem,
-        linkOriginal: p.url, linkAfiliado: link,
-        via: link ? via : null, status: link ? 'ok' : 'revisar',
-        coletadoEm: new Date().toISOString(),
-      });
-      if (link) porGrupo[g] = (porGrupo[g] || 0) + 1;
+      resultado.push(r.item);
       fs.writeFileSync(SAIDA, JSON.stringify(resultado, null, 2));
-      log(link
-        ? `   ✅ ${link} | R$ ${p.preco} (de R$ ${p.precoAntigo}, -${p.desconto}%) | ganho ${extra.ganho ?? '?'}% | via ${via} | ${g}`
-        : '   ❌ Não consegui gerar o link (marcado para revisar).');
+      if (r.link) {
+        falhasLink = 0;
+        porGrupo[g] = (porGrupo[g] || 0) + 1;
+        naoEnviados.push(r.item);
+        log(`   ✅ ${r.link} | R$ ${r.item.preco} (de R$ ${r.item.precoAntigo}, -${r.item.desconto}%) | ganho ${r.item.ganhoPercentual ?? '?'}% | via ${r.via} | ${g}`);
+        await enviarPendentes(false);
+      } else {
+        falhasLink++;
+        log('   ❌ Não consegui gerar o link (marcado para revisar).');
+        if (falhasLink === 3) {
+          log('   ⏸️ 3 falhas seguidas ao gerar link. Pausa de 4 minutos (pode ser limite do Mercado Livre).');
+          await esperar(4 * 60 * 1000);
+        } else if (falhasLink >= 6) {
+          log('   🛑 6 falhas seguidas. Parando esta rodada para não forçar a conta.');
+          break;
+        }
+      }
     }
   } finally {
+    await enviarPendentes(true); // o que sobrou vai ao servidor mesmo se a rodada terminou com erro
     await page.close().catch(() => {});
   }
+  resultado.enviados = enviados;
   return resultado;
 }
 
@@ -397,12 +486,8 @@ async function dormirAteJanela() {
       try {
         const itens = await rodada(browser, meta);
         const ok = itens.filter((i) => i.linkAfiliado);
-        if (ok.length) {
-          const nome = await enviarLote(ok);
-          log(`📤 ${ok.length} produto(s) enviado(s) ao servidor (${nome}). Em até 5 min entram no sistema.`);
-        } else {
-          log('ℹ️ Nenhum produto novo nesta rodada.');
-        }
+        if (!ok.length) log('ℹ️ Nenhum produto novo nesta rodada.');
+        else log(`🏁 Rodada concluída: ${ok.length} produto(s) com link (${itens.enviados || 0} já enviados ao servidor).`);
         estado.coletados += ok.length;
         estado.rodadas += 1;
         salvarEstado(estado);

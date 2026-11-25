@@ -41,3 +41,6 @@ promobot.db-wal
 promobot.db-shm
 backups-banco/
 products.pre-banco.json
+
+# Estado do robo (contador do dia)
+estado-robo.json

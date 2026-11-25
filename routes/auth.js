@@ -44,6 +44,13 @@ router.post('/logout', (req, res) => {
     });
 });
 
+// Atalho por link (o painel usa o POST; este é reserva).
+router.get('/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.redirect('/login.html');
+    });
+});
+
 router.get('/sessao', (req, res) => {
     res.json({
         autenticado: !!(req.session && req.session.autenticado),
