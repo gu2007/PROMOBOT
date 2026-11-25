@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia de estilo - I Ama Promos</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <!-- Estilos só desta página de guia (não são usados no resto do painel) -->
+    <style>
+        .secaoGuia{ margin-bottom:40px; }
+        .secaoGuia > h2{ font-size:20px; color:var(--marca-verde); margin-bottom:6px; }
+        .secaoGuia > p{ color:var(--cor-texto-secundario); font-size:14px; margin-bottom:16px; }
+        .linhaGuia{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+        .amostraCor{ width:150px; border:1px solid var(--cor-borda); border-radius:var(--raio); overflow:hidden; background:#fff; font-size:12px; }
+        .amostraCor div{ height:56px; }
+        .amostraCor span{ display:block; padding:6px 8px; }
+    </style>
+</head>
+<body>
+    <button class="botaoMenu" id="botaoMenu" aria-label="Abrir menu">☰</button>
+    <div class="overlayMenu" id="overlayMenu"></div>
+    <aside class="sidebar" id="sidebar">
+        <h2>I Ama Promos</h2>
+        <nav>
+            <a href="/">Dashboard</a>
+            <details class="grupoMenu">
+                <summary>Produtos</summary>
+                <div class="submenu">
+                    <a href="/produtos">Todos os produtos</a>
+                    <a href="/novo-produto">Novo produto</a>
+                    <a href="/importar-ia">Importações</a>
+                    <a href="/duplicados">Duplicados</a>
+                    <a href="/alteracoes">Alterações</a>
+                </div>
+            </details>
+            <a href="/configuracoes">Configurações</a>
+            <a href="/estilo.html" class="ativo">Guia de estilo</a>
+        </nav>
+    </aside>
+
+    <main>
+        <div class="cabecalhoPagina">
+            <div>
+                <h1>Guia de estilo</h1>
+                <p class="subtitulo">Todas as peças do visual novo num lugar só. Se uma cor ou um tamanho mudar em <code>style.css</code>, muda aqui também.</p>
+            </div>
+        </div>
+
+        <!-- CORES -->
+        <section class="secaoGuia">
+            <h2>Cores</h2>
+            <p>Verde e creme vêm do logo. O dourado é só para destaque (selo de desconto e botão "Novo produto").</p>
+            <div class="linhaGuia">
+                <div class="amostraCor"><div style="background:var(--marca-verde)"></div><span>Verde marca<br>#0d2217</span></div>
+                <div class="amostraCor"><div style="background:var(--cor-primaria)"></div><span>Verde botão<br>#1e5b3a</span></div>
+                <div class="amostraCor"><div style="background:var(--marca-dourado)"></div><span>Dourado<br>#d1a23f</span></div>
+                <div class="amostraCor"><div style="background:var(--marca-creme)"></div><span>Creme<br>#f5ecdc</span></div>
+                <div class="amostraCor"><div style="background:var(--cor-fundo)"></div><span>Fundo<br>#f7f5f0</span></div>
+            </div>
+        </section>
+
+        <!-- BOTÕES -->
+        <section class="secaoGuia">
+            <h2>Botões</h2>
+            <p>Uma ação principal (verde) por tela, para ficar claro o que fazer.</p>
+            <div class="linhaGuia">
+                <button class="primario">Salvar produto</button>
+                <button class="destaque">+ Novo produto</button>
+                <button>Cancelar</button>
+                <button class="perigo">Excluir</button>
+                <button class="fantasma">Mais opções</button>
+                <button class="pequeno">Pequeno</button>
+            </div>
+        </section>
+
+        <!-- BADGES E CHIPS -->
+        <section class="secaoGuia">
+            <h2>Status e filtros</h2>
+            <p>Etiquetas mostram status com cor e texto. Chips são filtros que você toca para ligar ou desligar.</p>
+            <div class="linhaGuia" style="margin-bottom:14px;">
+                <span class="badge badge-sucesso">Ativo</span>
+                <span class="badge badge-perigo">Inativo</span>
+                <span class="badge badge-aviso">Link a confirmar</span>
+                <span class="badge badge-neutro">Coletor</span>
+                <span class="badge badge-marca">Ferramentas</span>
+            </div>
+            <div class="listaChips">
+                <button class="chip ativo">Todos <span class="contador">452</span></button>
+                <button class="chip">Ativos <span class="contador">318</span></button>
+                <button class="chip">Inativos <span class="contador">134</span></button>
+                <button class="chip">Ferramentas</button>
+                <button class="chip">Automotivo</button>
+            </div>
+            <div style="margin-top:12px;">
+                <label class="interruptor"><input type="checkbox" checked><span></span> Ativo</label>
+            </div>
+        </section>
+
+        <!-- CARDS DE RESUMO -->
+        <section class="secaoGuia">
+            <h2>Cards de resumo</h2>
+            <p>Números principais do painel. Tocar no card leva para a página do assunto.</p>
+            <div class="cards">
+                <a href="#" class="card"><h3>Produtos ativos</h3><p class="valor-sucesso">318</p></a>
+                <a href="#" class="card"><h3>Produtos por hora</h3><p>2</p></a>
+                <a href="#" class="card"><h3>Grupos</h3><p>1</p></a>
+            </div>
+        </section>
+
+        <!-- CARTÃO DE PRODUTO -->
+        <section class="secaoGuia">
+            <h2>Cartão de produto</h2>
+            <p>Modelo que a tela de Produtos vai usar na Fase 2: foto grande, selo de desconto, preço antigo riscado.</p>
+            <div class="gradeProdutos">
+                <div class="cartaoProduto">
+                    <div class="imagemProduto">
+                        <span class="seloDesconto">-45%</span>
+                        <span class="placeholderImagem">Foto do produto</span>
+                    </div>
+                    <div class="corpoProduto">
+                        <p class="tituloProduto">Parafusadeira 12V Bivolt com maleta e 2 baterias</p>
+                        <span class="precoAntigo">R$ 289,90</span>
+                        <span class="precoProduto">R$ 159,90</span>
+                        <div class="acoesProduto">
+                            <label class="interruptor"><input type="checkbox" checked><span></span></label>
+                            <button class="pequeno">Editar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="cartaoProduto inativo">
+                    <div class="imagemProduto">
+                        <span class="seloDesconto">-32%</span>
+                        <span class="placeholderImagem">Foto do produto</span>
+                    </div>
+                    <div class="corpoProduto">
+                        <p class="tituloProduto">Compressor de ar portátil 12V digital</p>
+                        <span class="precoAntigo">R$ 199,00</span>
+                        <span class="precoProduto">R$ 134,90</span>
+                        <div class="acoesProduto">
+                            <label class="interruptor"><input type="checkbox"><span></span></label>
+                            <button class="pequeno">Editar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FORMULÁRIO -->
+        <section class="secaoGuia">
+            <h2>Formulário</h2>
+            <p>Rótulo em cima, ajuda embaixo. Campos com 16px para o celular não dar zoom.</p>
+            <div class="formulario">
+                <div class="linhaFormulario">
+                    <div class="campoFormulario">
+                        <label for="exPreco">Preço atual</label>
+                        <input id="exPreco" type="text" value="159,90">
+                        <small>Preço que aparece na oferta.</small>
+                    </div>
+                    <div class="campoFormulario">
+                        <label for="exCategoria">Categoria</label>
+                        <select id="exCategoria"><option>Ferramentas</option><option>Automotivo</option></select>
+                    </div>
+                </div>
+                <div class="avisoFormulario">Este produto não tem link de afiliado confirmado.</div>
+                <div class="acoesFormulario">
+                    <button class="primario">Salvar</button>
+                    <button>Cancelar</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- LISTA VAZIA -->
+        <section class="secaoGuia">
+            <h2>Lista vazia</h2>
+            <div class="estadoVazio">
+                <strong>Nenhum produto encontrado</strong>
+                Tente outra busca ou limpe os filtros.
+            </div>
+        </section>
+    </main>
+
+    <script src="assets/js/menu.js"></script>
+</body>
+</html>
