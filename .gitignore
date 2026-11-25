@@ -34,3 +34,10 @@ coletor/lotes/
 revisao-entrada/
 revisao-processados/
 coletor/lotes-revisao/
+
+# Banco de dados (SQLite) e copias de seguranca
+promobot.db
+promobot.db-wal
+promobot.db-shm
+backups-banco/
+products.pre-banco.json

@@ -7,6 +7,7 @@
 //
 //   Só olhar, sem mexer em nada:   node coletor\revisor.js --simular --n=5
 //   Revisar de verdade (40):       node coletor\revisor.js --n=40
+//   Um produto só, e corrigir já:  node coletor\revisor.js --id=56 --aplicar-agora
 //   Revisar tudo, de pouco em pouco (modo contínuo, dentro da janela de horário):
 //                                  node coletor\revisor.js --continuo
 //
@@ -75,7 +76,8 @@ async function enviarLote(itens) {
 
 // Quem entra na revisão: ativos e os que o próprio revisor desativou (para poder reativar),
 // só do Mercado Livre e só com o link do produto. Os mais antigos de revisar primeiro.
-function escolher(lista, n, todos) {
+function escolher(lista, n, todos, idUnico) {
+  if (idUnico) return lista.filter((p) => p.id === idUnico && p.linkOriginal && p.linkAfiliado);
   return lista
     .filter((p) => /mercadolivre/i.test(p.marketplace || '') && p.linkOriginal && p.linkAfiliado)
     .filter((p) => todos || p.ativo || p.desativadoPeloRevisor)
@@ -114,6 +116,7 @@ async function lerPagina(page) {
       } catch (_) {}
     }
 
+    const og = ((document.querySelector('meta[property="og:image"]') || {}).content) || '';
     const atualEl = document.querySelector('.ui-pdp-price__second-line .andes-money-amount');
     const antigoEl = document.querySelector('.ui-pdp-price__original-value');
     const corpo = document.body ? document.body.innerText : '';
@@ -128,6 +131,10 @@ async function lerPagina(page) {
       temComprar: /comprar agora|adicionar ao carrinho/i.test(acoes),
       sinalIndisp: /publica[çc][ãa]o (pausada|finalizada)|an[úu]ncio (pausado|finalizado)|n[ãa]o est[áa] dispon[íi]vel|produto indispon[íi]vel|estoque esgotado|n[ãa]o h[áa] mais estoque|esgotado/i.test(corpo),
       ldFora: /OutOfStock|SoldOut|Discontinued/i.test(ldDisp),
+      // Produto internacional (vem do exterior, ex.: China): foto "CBT", "Envio de China" etc.
+      internacional: /CBT\d{6,}/.test(og)
+        || /\bEnvio de (China|Hong Kong|Estados Unidos|EUA|Exterior)\b/i.test(corpo)
+        || /compra internacional|produto internacional|do exterior/i.test(corpo),
     };
   });
 }
@@ -137,6 +144,7 @@ function interpretar(leitura, produto) {
   if (/^lista\./.test(leitura.host)) return { status: 'indisponivel', motivo: 'redirecionou para a lista' };
   if (!/mercadolivre\.com\.br$/.test(leitura.host)) return { status: 'erro', motivo: 'página inesperada: ' + leitura.url };
   if ((leitura.sinalIndisp || leitura.ldFora) && !leitura.temComprar) return { status: 'indisponivel', motivo: 'aviso de indisponível' };
+  if (leitura.internacional) return { status: 'internacional', motivo: 'produto internacional' };
   if (!leitura.preco) return { status: 'erro', motivo: 'não achei o preço' };
   return { status: 'ok', preco: leitura.preco, precoAntigo: leitura.precoAntigo || null };
 }
@@ -145,6 +153,7 @@ function interpretar(leitura, produto) {
 function previa(produto, r) {
   if (r.status === 'erro') return 'sem leitura (nada muda)';
   if (r.status === 'indisponivel') return produto.ativo ? 'DESATIVAR (indisponível)' : 'continua inativo';
+  if (r.status === 'internacional') return produto.ativo ? 'DESATIVAR (internacional)' : 'continua inativo';
   const antigo = r.precoAntigo > r.preco ? r.precoAntigo : null;
   const desc = antigo ? Math.round((1 - r.preco / antigo) * 100) : 0;
   const mudouPreco = Math.abs(r.preco - Number(produto.preco)) >= 0.005;
@@ -153,6 +162,18 @@ function previa(produto, r) {
   else if (desc > CONFIG.descontoMax) acao = produto.ativo ? 'DESATIVAR (desconto suspeito)' : acao;
   else if (!produto.ativo && produto.desativadoPeloRevisor) acao = 'REATIVAR';
   return `${mudouPreco ? `preço R$ ${produto.preco} -> R$ ${r.preco}; ` : 'preço igual; '}desconto ${desc}% | ${acao}`;
+}
+
+// Manda o servidor aplicar já os resultados (sem esperar os 5 min).
+function aplicarNoServidor() {
+  return new Promise((resolve) => {
+    execFile('ssh', ['-i', SERVIDOR.chave, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=20', SERVIDOR.host,
+      `cd ${SERVIDOR.pasta} && mkdir -p revisao-entrada && node revisor-aplicar.js`],
+      { timeout: 60000 }, (erro, out, e) => {
+        console.log((out || '').trim() || (e || (erro && erro.message) || '').trim());
+        resolve();
+      });
+  });
 }
 
 async function abrir(page, url) {
@@ -169,15 +190,15 @@ async function abrir(page, url) {
   return false;
 }
 
-async function execucao(browser, n, simular, todos) {
+async function execucao(browser, n, simular, todos, idUnico, aplicarAgora) {
   const lista = await baixarLista();
-  const fila = escolher(lista, n, todos);
+  const fila = escolher(lista, n, todos, idUnico);
   log(`📦 ${lista.length} produtos no servidor. Vou revisar ${fila.length}${simular ? ' (SIMULAÇÃO: nada será enviado)' : ''}.`);
   if (!fila.length) return;
 
   const page = await browser.newPage();
   const pendentes = [];
-  const total = { ok: 0, indisp: 0, erro: 0 };
+  const total = { ok: 0, indisp: 0, intl: 0, erro: 0 };
   try {
     for (const p of fila) {
       log(`➡️  #${p.id} ${String(p.titulo).slice(0, 60)}`);
@@ -189,8 +210,9 @@ async function execucao(browser, n, simular, todos) {
       } catch (e) {
         r = { status: 'erro', motivo: e.message || String(e) };
       }
-      if (r.status === 'ok') total.ok++; else if (r.status === 'indisponivel') total.indisp++; else total.erro++;
-      log(`   ${r.status === 'erro' ? '⚠️ ' : r.status === 'indisponivel' ? '🚫' : '✅'} ${r.status}${r.motivo ? ' (' + r.motivo + ')' : ''} ${simular ? '| ' + previa(p, r) : ''}`);
+      if (r.status === 'ok') total.ok++; else if (r.status === 'indisponivel') total.indisp++; else if (r.status === 'internacional') total.intl++; else total.erro++;
+      const lido = r.status === 'ok' ? ` | lido: R$ ${r.preco}${r.precoAntigo ? ' (de R$ ' + r.precoAntigo + ')' : ' (SEM preço antigo)'} | no sistema: R$ ${p.preco}${p.precoAntigo ? ' (de R$ ' + p.precoAntigo + ')' : ''}` : '';
+      log(`   ${r.status === 'erro' ? '⚠️ ' : (r.status === 'indisponivel' || r.status === 'internacional') ? '🚫' : '✅'} ${r.status}${r.motivo ? ' (' + r.motivo + ')' : ''}${lido} ${simular ? '| ' + previa(p, r) : ''}`);
 
       pendentes.push({ id: p.id, linkAfiliado: p.linkAfiliado, ...r, lidoEm: new Date().toISOString() });
       if (!simular && pendentes.filter((x) => x.status !== 'erro').length >= CONFIG.lote) {
@@ -205,14 +227,20 @@ async function execucao(browser, n, simular, todos) {
   if (!simular && pendentes.length) {
     const nome = await enviarLote(pendentes);
     log(`📤 Lote final enviado (${nome}). Em até 5 min o servidor aplica.`);
+    if (aplicarAgora) {
+      log('⚙️  Pedindo ao servidor para aplicar AGORA...');
+      await aplicarNoServidor();
+    }
   }
-  log(`🏁 Fim. ok: ${total.ok} | indisponíveis: ${total.indisp} | sem leitura: ${total.erro}`);
+  log(`🏁 Fim. ok: ${total.ok} | indisponíveis: ${total.indisp} | internacionais: ${total.intl} | sem leitura: ${total.erro}`);
 }
 
 (async () => {
   const continuo = process.argv.includes('--continuo');
   const simular = process.argv.includes('--simular');
   const todos = process.argv.includes('--todos');
+  const idUnico = Number((process.argv.find((a) => a.startsWith('--id=')) || '').split('=')[1]) || 0;
+  const aplicarAgora = process.argv.includes('--aplicar-agora');
   const argN = Number((process.argv.find((a) => a.startsWith('--n=')) || '').split('=')[1]) || CONFIG.porExecucao;
 
   let browser;
@@ -231,7 +259,7 @@ async function execucao(browser, n, simular, todos) {
         }
       }
       try {
-        await execucao(browser, argN, simular, todos);
+        await execucao(browser, argN, simular, todos, idUnico, aplicarAgora);
       } catch (e) {
         log('❌ Erro nesta execução: ' + (e.message || e));
       }

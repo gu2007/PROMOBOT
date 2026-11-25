@@ -147,12 +147,46 @@ function produtoSemDescontoReal(produto) {
 
 }
 
-function carregarProdutos() {
+// ---- Banco de dados (SQLite) ----
+// Se "bancoDeDados": true no config.json, os produtos ficam no banco (banco.js) e o
+// products.json vira só um espelho de leitura. Se for false/ausente, tudo funciona como
+// antes (arquivo JSON). A flag é relida a cada 10 s.
+const banco = require('./banco');
+let flagBanco = { valor: false, lidoEm: 0 };
+
+function usarBanco() {
+    const agora = Date.now();
+    if (agora - flagBanco.lidoEm > 10 * 1000) {
+        flagBanco.lidoEm = agora;
+        try {
+            const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8').replace(/^\uFEFF/, ''));
+            flagBanco.valor = cfg.bancoDeDados === true;
+        } catch (_) {
+            flagBanco.valor = false;
+        }
+    }
+    return flagBanco.valor;
+}
+
+function carregarProdutosDoJson() {
     if (!fs.existsSync(PRODUCTS_PATH)) return [];
 
     return JSON.parse(
-        fs.readFileSync(PRODUCTS_PATH, 'utf8')
+        fs.readFileSync(PRODUCTS_PATH, 'utf8').replace(/^\uFEFF/, '')
     );
+}
+
+function carregarProdutos() {
+    if (usarBanco()) {
+        try {
+            return banco.lerTodos();
+        } catch (erro) {
+            // Leitura nunca derruba o robô: usa o espelho (products.json), que é atualizado a cada mudança.
+            console.error('⚠️ Banco de dados falhou na leitura, usando o products.json:', erro.message);
+            return carregarProdutosDoJson();
+        }
+    }
+    return carregarProdutosDoJson();
 }
 
 // Grava num arquivo temporário e só depois troca pelo products.json. Se o
@@ -160,6 +194,11 @@ function carregarProdutos() {
 // energia, restart), o products.json antigo continua inteiro em vez de ficar
 // cortado pela metade.
 function salvarProdutos(produtos) {
+    if (usarBanco()) {
+        banco.salvarTodos(produtos);
+        return;
+    }
+
     const temporario = PRODUCTS_PATH + '.tmp';
 
     fs.writeFileSync(
@@ -335,6 +374,10 @@ function registrarEnvio(id) {
     produtoReal.ultimaDivulgacao = new Date().toISOString();
 
     salvarProdutos(todos);
+
+    if (usarBanco()) {
+        try { banco.registrarEnvio(produtoReal.id); } catch (erro) { console.error('⚠️ Não registrei o envio no histórico:', erro.message); }
+    }
 
     return produtoReal;
 

@@ -23,12 +23,18 @@ const CONFIG = {
     'politriz-automotiva', 'esmerilhadeira', 'parafusadeira', 'furadeira', 'macaco-hidraulico',
     'carregador-de-bateria-automotivo', 'lavadora-de-alta-pressao', 'kit-soquetes',
     'alicate', 'torquimetro', 'multimetro-automotivo', 'aspirador-automotivo',
+    'chave-de-fenda', 'jogo-de-chaves-combinadas', 'chave-inglesa', 'chave-de-roda', 'trena',
+    'nivel-laser', 'martelo', 'serra-tico-tico', 'serra-circular', 'lixadeira', 'soprador-termico',
+    'maquina-de-solda', 'cavalete-automotivo', 'inflador-de-pneus', 'caixa-de-ferramentas',
+    'maleta-de-ferramentas', 'jogo-de-brocas', 'kit-bits', 'paquimetro', 'estilete', 'tupia',
+    'extrator-de-parafuso', 'pistola-de-pintura', 'lanterna-tatica', 'bomba-de-ar-eletrica',
   ],
   paginasMax: 5,            // sorteia a página de 1 a 5 de cada busca (48 produtos por página)
+  descontoMax: 70,          // acima disso é quase sempre preço errado/falso
   descontoMin: 30,          // % mínimo de desconto
   avaliacaoMin: 4.3,        // ignora produtos com nota menor (se tiver nota)
   porRodada: 15,            // produtos novos por rodada
-  tetoDiario: 60,           // máximo de produtos novos por dia (proteção da sua conta)
+  tetoDiario: 250,           // máximo de produtos novos por dia (proteção da sua conta)
   janelaInicio: 8,          // só trabalha entre estas horas (modo --continuo)
   janelaFim: 22,
   intervaloRodadaMin: [60, 120], // minutos de descanso entre rodadas (sorteado)
@@ -41,6 +47,35 @@ const SERVIDOR = {
   pasta: '~/PROMOBOT',
 };
 // -----------------------------
+
+// Só entram produtos do nicho (ferramentas). Título precisa ter uma palavra do nicho e nenhuma de fora.
+const NICHO_OK = /\b(ferrament|chave|soquete|catraca|alicate|furadeira|parafusadeira|esmerilhadeira|lixadeira|compressor|macaco|torqu[ií]metro|mult[ií]metro|politriz|lavadora|aspirador|serra|tupia|martelete|martelo|marreta|trena|n[ií]vel|paqu[ií]metro|maleta|broca|bits?\b|helicoil|extrator|rebitador|grampeador|pistola|solda|talhadeira|lima\b|torno|morsa|calibrador|inflador|carregador de bateria|guincho|cavalete|estilete|formão|plaina|desempenadeira|multiuso)/i;
+const NICHO_FORA = /(impress[aã]o 3d|brinquedo|infantil|joalher|rel[oó]gio|cosm[eé]tic|maquiagem|cozinha|panela|celular|smartphone|fone de|capinha|\bpet\b|cachorro|beb[eê]|roupa|camiseta|sapato|t[eê]nis|mochila escolar|bijuteria|artesanato|resina|tabuleiro)/i;
+const tituloDoNicho = (titulo) => NICHO_OK.test(String(titulo)) && !NICHO_FORA.test(String(titulo));
+
+// Variedade: agrupa os produtos por tipo e intercala, com limite por grupo em cada rodada.
+const GRUPOS = [
+  ['furadeira/parafusadeira', /furadeira|parafusadeira|martelete/i],
+  ['esmerilhadeira/lixadeira/politriz', /esmerilhadeira|lixadeira|politriz|retifica/i],
+  ['serras/tupia/plaina', /\bserra|tupia|plaina|soprador/i],
+  ['soquetes/catracas', /soquete|catraca|torqu[ií]metro|chave de impacto|chave de roda/i],
+  ['chaves/alicates', /chave|alicate|estilete|extrator|rebitador|grampeador/i],
+  ['medicao', /trena|n[ií]vel|paqu[ií]metro|mult[ií]metro|calibrador/i],
+  ['compressor/inflador/lavadora', /compressor|inflador|bomba|lavadora|aspirador/i],
+  ['macaco/cavalete/guincho', /macaco|cavalete|guincho|carregador de bateria/i],
+  ['maleta/bolsa/caixa', /maleta|bolsa|caixa|organizador|cinto|painel/i],
+  ['solda/pintura', /solda|pistola|pintura/i],
+  ['kits/jogos', /\bjogo|\bkit|ferrament/i],
+];
+const grupoDe = (titulo) => { for (const [nome, re] of GRUPOS) if (re.test(String(titulo))) return nome; return 'outros'; };
+function intercalar(lista) {
+  const grupos = {};
+  for (const p of lista.slice().sort(() => Math.random() - 0.5)) (grupos[grupoDe(p.titulo)] = grupos[grupoDe(p.titulo)] || []).push(p);
+  const filas = Object.values(grupos);
+  const saida = [];
+  while (filas.some((q) => q.length)) for (const q of filas) if (q.length) saida.push(q.shift());
+  return saida;
+}
 
 const PASTA = __dirname;
 const SAIDA = path.join(PASTA, 'resultado.json');
@@ -217,12 +252,15 @@ async function rodada(browser, meta) {
 
     // sorteia buscas/páginas até juntar candidatos suficientes (máx. 4 buscas)
     const buscas = [...CONFIG.buscas].sort(() => Math.random() - 0.5);
-    for (const busca of buscas.slice(0, 4)) {
-      if (candidatos.length >= meta * 2) break;
+    const maxBuscas = Math.max(6, Math.ceil(meta / 6));
+    let feitas = 0;
+    for (const busca of buscas.slice(0, maxBuscas)) {
+      if (candidatos.length >= meta * 2 && feitas >= Math.min(10, maxBuscas)) break;
       const pag = 1 + Math.floor(Math.random() * CONFIG.paginasMax);
       const desde = pag > 1 ? `_Desde_${(pag - 1) * 48 + 1}` : '';
       const urlBusca = `https://lista.mercadolivre.com.br/${busca}${desde}_Discount_${CONFIG.descontoMin}-100_NoIndex_True`;
       log(`🔎 Buscando "${busca}" (página ${pag})`);
+      feitas++;
       if (!(await abrir(page, urlBusca, 'Captcha na busca. Resolva na janela do Chrome.'))) continue;
       await esperar(2500);
       const lidos = await lerBusca(page);
@@ -233,14 +271,21 @@ async function rodada(browser, meta) {
         if (!p.preco || !p.precoAntigo || p.precoAntigo <= p.preco) continue;
         if ((p.desconto || 0) < CONFIG.descontoMin) continue;
         if (p.avaliacao && p.avaliacao < CONFIG.avaliacaoMin) continue;
+        if (!tituloDoNicho(p.titulo)) continue;
         candidatos.push(p);
       }
       log(`   ${lidos.length} produtos na página; candidatos novos até agora: ${candidatos.length}`);
       await pausa();
     }
 
+    candidatos = intercalar(candidatos);
+    const porGrupo = {};
+    const capGrupo = Math.max(5, Math.round(meta * 0.15));
+    log(`🧮 ${candidatos.length} candidatos de ${new Set(candidatos.map((c) => grupoDe(c.titulo))).size} tipos. Limite de ${capGrupo} por tipo nesta rodada.`);
     for (const p of candidatos) {
       if (resultado.filter((r) => r.linkAfiliado).length >= meta) break;
+      const g = grupoDe(p.titulo);
+      if ((porGrupo[g] || 0) >= capGrupo) continue;
       log('➡️  ' + p.titulo.slice(0, 70));
       await pausa();
       if (!(await abrir(page, p.url, 'Captcha/login na página do produto. Resolva na janela do Chrome.'))) continue;
@@ -253,8 +298,35 @@ async function rodada(browser, meta) {
         const g = barra.match(/GANHOS\s*(\d+(?:[.,]\d+)?)\s*%/i);
         const og = document.querySelector('meta[property="og:image"]');
         const h1 = document.querySelector('h1');
-        return { ganho: g ? parseFloat(g[1].replace(',', '.')) : null, imagem: og ? og.content : null, titulo: h1 ? h1.innerText.trim() : null };
+        const din = (el) => {
+          if (!el) return null;
+          const fr = el.querySelector('.andes-money-amount__fraction');
+          if (!fr) return null;
+          const inteiro = fr.innerText.replace(/\D/g, '');
+          if (!inteiro) return null;
+          const ce = el.querySelector('.andes-money-amount__cents');
+          return Number(inteiro + '.' + (ce ? ce.innerText.replace(/\D/g, '').padEnd(2, '0').slice(0, 2) : '00'));
+        };
+        const corpo = document.body ? document.body.innerText : '';
+        const ogImg = og ? og.content : '';
+        return {
+          ganho: g ? parseFloat(g[1].replace(',', '.')) : null, imagem: og ? og.content : null, titulo: h1 ? h1.innerText.trim() : null,
+          preco: din(document.querySelector('.ui-pdp-price__second-line .andes-money-amount')),
+          precoAntigo: din(document.querySelector('.ui-pdp-price__original-value')),
+          internacional: /CBT\d{6,}/.test(ogImg) || /\bEnvio de (China|Hong Kong|Estados Unidos|EUA|Exterior)\b/i.test(corpo) || /compra internacional|produto internacional|do exterior/i.test(corpo),
+        };
       });
+
+      // Confere na PRÓPRIA página do produto (o preço da lista de busca pode estar errado)
+      if (extra.internacional) { log('   ⏭️ Produto internacional: ignorado.'); continue; }
+      if (!(extra.preco && extra.precoAntigo && extra.precoAntigo > extra.preco)) { log('   ⏭️ Sem desconto real na página: ignorado.'); continue; }
+      p.preco = extra.preco;
+      p.precoAntigo = extra.precoAntigo;
+      p.desconto = Math.round((1 - extra.preco / extra.precoAntigo) * 100);
+      if (p.desconto < CONFIG.descontoMin || p.desconto > CONFIG.descontoMax) {
+        log(`   ⏭️ Desconto real ${p.desconto}% fora de ${CONFIG.descontoMin}-${CONFIG.descontoMax}%: ignorado.`);
+        continue;
+      }
 
       let link = await linkPelaBarra(page);
       let via = 'barra';
@@ -273,9 +345,10 @@ async function rodada(browser, meta) {
         via: link ? via : null, status: link ? 'ok' : 'revisar',
         coletadoEm: new Date().toISOString(),
       });
+      if (link) porGrupo[g] = (porGrupo[g] || 0) + 1;
       fs.writeFileSync(SAIDA, JSON.stringify(resultado, null, 2));
       log(link
-        ? `   ✅ ${link} | R$ ${p.preco} (de R$ ${p.precoAntigo}, -${p.desconto}%) | ganho ${extra.ganho ?? '?'}% | via ${via}`
+        ? `   ✅ ${link} | R$ ${p.preco} (de R$ ${p.precoAntigo}, -${p.desconto}%) | ganho ${extra.ganho ?? '?'}% | via ${via} | ${g}`
         : '   ❌ Não consegui gerar o link (marcado para revisar).');
     }
   } finally {
@@ -318,7 +391,7 @@ async function dormirAteJanela() {
         await esperar(30 * 60 * 1000);
         continue;
       }
-      const meta = Math.max(1, Math.min(Number(argN) || CONFIG.porRodada, continuo ? restante : 99));
+      const meta = Math.max(1, Math.min(Number(argN) || CONFIG.porRodada, continuo ? restante : 300));
 
       log(`▶️ Rodada ${estado.rodadas + 1} de hoje | meta ${meta} | já coletados hoje: ${estado.coletados}/${CONFIG.tetoDiario}`);
       try {
