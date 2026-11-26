@@ -128,6 +128,35 @@ function scp(origem, destino) {
 
 const idDoLink = (url) => (String(url).match(/MLB-?U?\d+/i) || [''])[0].replace('-', '').toUpperCase();
 
+// ---- repetidos por TÍTULO + PREÇO (mesma regra que o servidor usa nos Duplicados) ----
+function normTitulo(t) {
+  return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function palavrasDe(t) {
+  return new Set(normTitulo(t).split(' ').filter((w) => w.length >= 3));
+}
+function similaridade(a, b) {
+  if (!a.size || !b.size) return 0;
+  let comum = 0;
+  a.forEach((w) => { if (b.has(w)) comum++; });
+  return comum / new Set([...a, ...b]).size;
+}
+function precoProximo(a, b) {
+  a = Number(a); b = Number(b);
+  if (!(a > 0) || !(b > 0)) return false;
+  return Math.abs(a - b) / Math.max(a, b) <= 0.15;
+}
+// Esse produto já existe (no catálogo ou entre os já escolhidos)? Devolve o título parecido ou ''.
+function achaRepetido(p, itens) {
+  const pa = palavrasDe(p.titulo);
+  for (const it of itens) {
+    const s = similaridade(pa, it.palavras);
+    if ((s >= 0.5 && precoProximo(p.preco, it.preco)) || s >= 0.75) return it.titulo;
+  }
+  return '';
+}
+
 async function listaDoServidor() {
   try {
     await scp(`${SERVIDOR.host}:${SERVIDOR.pasta}/products.json`, LISTA_SERVIDOR);
@@ -136,18 +165,20 @@ async function listaDoServidor() {
   }
   const ids = new Set();
   const links = new Set();
+  const itens = [];
   try {
     const lista = JSON.parse(fs.readFileSync(LISTA_SERVIDOR, 'utf8').replace(/^\uFEFF/, ''));
     for (const p of lista) {
       const m = idDoLink(p.linkOriginal);
       if (m) ids.add(m);
       if (p.linkAfiliado) links.add(p.linkAfiliado);
+      if (p.titulo) itens.push({ titulo: p.titulo, preco: p.preco, palavras: palavrasDe(p.titulo) });
     }
     log(`📦 Lista do servidor: ${lista.length} produtos (serão ignorados os repetidos).`);
   } catch (e) {
     log('ℹ️ Sem lista do servidor: vou coletar sem checar repetidos (o servidor ignora duplicados).');
   }
-  return { ids, links };
+  return { ids, links, itens };
 }
 
 async function enviarLote(itens) {
@@ -295,6 +326,8 @@ async function rodada(browser, meta) {
     const jaTem = await listaDoServidor();
     const vistos = new Set();
     let candidatos = [];
+    const candidatosItens = [];
+    let repetidosTitulo = 0;
 
     // sorteia buscas/páginas até juntar candidatos suficientes e variados
     const buscas = [...CONFIG.buscas].sort(() => Math.random() - 0.5);
@@ -319,7 +352,10 @@ async function rodada(browser, meta) {
           if ((p.desconto || 0) < CONFIG.descontoMin) continue;
           if (p.avaliacao && p.avaliacao < CONFIG.avaliacaoMin) continue;
           if (!tituloDoNicho(p.titulo)) continue;
+          const parecido = achaRepetido(p, jaTem.itens) || achaRepetido(p, candidatosItens);
+          if (parecido) { repetidosTitulo++; continue; }
           candidatos.push(p);
+          candidatosItens.push({ titulo: p.titulo, preco: p.preco, palavras: palavrasDe(p.titulo) });
         }
         log(`   ${lidos.length} produtos na página; candidatos novos até agora: ${candidatos.length}`);
       } catch (e) {
@@ -329,6 +365,7 @@ async function rodada(browser, meta) {
       await pausa();
     }
 
+    if (repetidosTitulo) log(`♻️ ${repetidosTitulo} produto(s) pulado(s) por já existirem no catálogo (título parecido e preço próximo).`);
     candidatos = intercalar(candidatos);
     const porGrupo = {};
     const capGrupo = Math.max(5, Math.round(meta * 0.15));
