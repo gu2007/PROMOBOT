@@ -12,6 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 const { adicionarProduto, listarProdutos } = require('./produtos');
+const { classificar } = require('./categorias-padrao');
 
 const ENTRADA = path.join(__dirname, 'coletor-entrada');
 const PROCESSADOS = path.join(__dirname, 'coletor-processados');
@@ -79,7 +80,7 @@ function importarColetor() {
 
       const salvo = adicionarProduto({
         marketplace: 'mercadolivre',
-        categoria: bom ? 'Coletor' : 'Coletor - revisar',
+        categoria: classificar(item.titulo, ''),
         titulo: String(item.titulo).trim(),
         preco: Number(item.preco),
         precoAntigo: Number(item.precoAntigo),
