@@ -2214,3 +2214,162 @@ textarea.campoExpandivel{
 .login-box .erro:empty{
     display:none;
 }
+
+/* ===== 10. DUPLICADOS (pares lado a lado) =============================== */
+.listaPares{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+}
+
+.cartaoPar{
+    background:var(--superficie);
+    border:1px solid var(--linha);
+    border-radius:var(--raio-g);
+    padding:14px;
+}
+
+/* Os dois produtos lado a lado (até no celular, para comparar as fotos) */
+.ladosPar{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:12px;
+}
+
+.ladoPar{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    min-width:0;
+}
+
+.ladoPar + .ladoPar{
+    border-left:1px solid var(--linha);
+    padding-left:12px;
+}
+
+.rotuloLado{
+    font-size:12px;
+    font-weight:800;
+    color:var(--texto-2);
+}
+
+.rotuloLado.novo{
+    color:var(--dourado-texto);
+}
+
+.ladoPar .fotoOferta{
+    border-radius:var(--raio);
+}
+
+.tituloLado{
+    font-size:13px;
+    font-weight:600;
+    line-height:1.35;
+    display:-webkit-box;
+    -webkit-line-clamp:3;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+}
+
+.ladoPar .metaProduto .etiqueta{
+    font-size:11px;
+    padding:2px 8px;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.infoLado{
+    font-size:12px;
+    color:var(--texto-3);
+}
+
+.linksLado{
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px;
+    margin-top:auto;
+}
+
+.linksLado .botao,
+.linksLado button{
+    padding:6px 10px;
+    font-size:12.5px;
+}
+
+.ladoPar > button.perigo{
+    margin-top:4px;
+    min-height:40px;
+    font-size:13px;
+}
+
+.ladoVazio{
+    justify-content:center;
+    color:var(--texto-2);
+    font-size:13px;
+}
+
+.rodapePar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px solid var(--linha);
+}
+
+.rodapePar button{
+    flex:1;
+}
+
+@media (min-width:601px){
+
+    .cartaoPar{
+        padding:20px;
+    }
+
+    .ladosPar{
+        gap:20px;
+    }
+
+    .ladoPar + .ladoPar{
+        padding-left:20px;
+    }
+
+    .ladoPar .fotoOferta{
+        max-width:260px;
+    }
+
+    .tituloLado{
+        font-size:14.5px;
+    }
+
+    .rodapePar button{
+        flex:none;
+    }
+
+}
+
+@media (min-width:1024px){
+
+    .listaPares{
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0,1fr));
+        gap:20px;
+    }
+
+}
+
+/* Chips de categoria embaixo do campo Categoria (Novo/Editar produto) */
+.sugestoesCategoria{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-top:8px;
+}
+
+.sugestoesCategoria .chip{
+    min-height:36px;
+    padding:6px 12px;
+}

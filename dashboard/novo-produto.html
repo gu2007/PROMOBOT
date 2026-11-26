@@ -69,7 +69,10 @@
 
                 <div class="campoFormulario">
                     <label for="categoria">Categoria</label>
-                    <textarea id="categoria" rows="1" class="campoExpandivel" placeholder="Ex.: Ferramentas automotivas"></textarea>
+                    <input type="text" id="categoria" autocomplete="off" placeholder="Toque numa categoria abaixo" aria-describedby="dicaCategoria">
+                    <!-- Categorias que já existem (o categorias-campo.js preenche) -->
+                    <div class="sugestoesCategoria" id="sugestoesCategoria"></div>
+                    <small id="dicaCategoria">Escolha uma das categorias existentes para não criar repetidas.</small>
                 </div>
 
             </div>
@@ -127,6 +130,8 @@
     <script src="assets/js/novo-produto.js"></script>
 
     <script src="assets/js/menu.js"></script>
+
+    <script src="assets/js/categorias-campo.js"></script>
 
 </body>
 
