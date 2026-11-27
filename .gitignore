@@ -48,3 +48,5 @@ grupos.json
 grupos.json.tmp
 config.json.tmp
 products.antes-categorias-*.json
+removidos-*.json
+products.antes-limpeza-*.json
