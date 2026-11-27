@@ -59,6 +59,7 @@ const GRUPOS = [
   ['esmerilhadeira/lixadeira/politriz', /esmerilhadeira|lixadeira|politriz|retifica/i],
   ['serras/tupia/plaina', /\bserra|tupia|plaina|soprador/i],
   ['soquetes/catracas', /soquete|catraca|torqu[ií]metro|chave de impacto|chave de roda/i],
+  ['martelo/marreta', /martelo|marreta|talhadeira|machado|formao|for[mç][aã]o/i],
   ['chaves/alicates', /chave|alicate|estilete|extrator|rebitador|grampeador/i],
   ['medicao', /trena|n[ií]vel|paqu[ií]metro|mult[ií]metro|calibrador/i],
   ['compressor/inflador/lavadora', /compressor|inflador|bomba|lavadora|aspirador/i],
@@ -67,7 +68,12 @@ const GRUPOS = [
   ['solda/pintura', /solda|pistola|pintura/i],
   ['kits/jogos', /\bjogo|\bkit|ferrament/i],
 ];
-const grupoDe = (titulo) => { for (const [nome, re] of GRUPOS) if (re.test(String(titulo))) return nome; return 'outros'; };
+// Sem grupo conhecido? Agrupa pela primeira palavra do título (assim "outros" também tem limite por tipo).
+const grupoDe = (titulo) => {
+  for (const [nome, re] of GRUPOS) if (re.test(String(titulo))) return nome;
+  const w = String(titulo).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().match(/[a-z]{4,}/);
+  return 'outros:' + (w ? w[0] : '?');
+};
 function intercalar(lista) {
   const grupos = {};
   for (const p of lista.slice().sort(() => Math.random() - 0.5)) (grupos[grupoDe(p.titulo)] = grupos[grupoDe(p.titulo)] || []).push(p);
@@ -368,7 +374,7 @@ async function rodada(browser, meta) {
     if (repetidosTitulo) log(`♻️ ${repetidosTitulo} produto(s) pulado(s) por já existirem no catálogo (título parecido e preço próximo).`);
     candidatos = intercalar(candidatos);
     const porGrupo = {};
-    const capGrupo = Math.max(5, Math.round(meta * 0.15));
+    const capGrupo = Math.max(4, Math.round(meta * 0.12));
     log(`🧮 ${candidatos.length} candidatos de ${new Set(candidatos.map((c) => grupoDe(c.titulo))).size} tipos. Limite de ${capGrupo} por tipo nesta rodada.`);
 
     let falhasLink = 0;
