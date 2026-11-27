@@ -29,7 +29,11 @@ const CONFIG = {
     'maleta-de-ferramentas', 'jogo-de-brocas', 'kit-bits', 'paquimetro', 'estilete', 'tupia',
     'extrator-de-parafuso', 'pistola-de-pintura', 'lanterna-tatica', 'bomba-de-ar-eletrica',
   ],
-  paginasMax: 5,            // sorteia a página de 1 a 5 de cada busca (48 produtos por página)
+  // Marcas de elite: entram sempre algumas buscas destas em cada rodada
+  buscasPremium: ['makita', 'dewalt', 'gedore', 'bosch-professional', 'milwaukee', 'hikoki',
+    'wurth', 'irwin', 'stanley-ferramentas', 'makita-parafusadeira', 'dewalt-furadeira',
+    'gedore-jogo-de-chaves', 'bosch-professional-furadeira'],
+  paginasMax: 5,            // (não usado mais: a página é sorteada entre 1 e 4, com peso maior nas primeiras)
   descontoMax: 70,          // acima disso é quase sempre preço errado/falso
   descontoMin: 30,          // % mínimo de desconto
   avaliacaoMin: 4.3,        // ignora produtos com nota menor (se tiver nota)
@@ -49,7 +53,7 @@ const SERVIDOR = {
 // -----------------------------
 
 // Só entram produtos do nicho (ferramentas). Título precisa ter uma palavra do nicho e nenhuma de fora.
-const NICHO_OK = /\b(ferrament|chave|soquete|catraca|alicate|furadeira|parafusadeira|esmerilhadeira|lixadeira|compressor|macaco|torqu[ií]metro|mult[ií]metro|politriz|lavadora|aspirador|serra|tupia|martelete|martelo|marreta|trena|n[ií]vel|paqu[ií]metro|maleta|broca|bits?\b|helicoil|extrator|rebitador|grampeador|pistola|solda|talhadeira|lima\b|torno|morsa|calibrador|inflador|carregador de bateria|guincho|cavalete|estilete|formão|plaina|desempenadeira|multiuso)/i;
+const NICHO_OK = /\b(dewalt|makita|gedore|milwaukee|hikoki|wurth|irwin|ferrament|chave|soquete|catraca|alicate|furadeira|parafusadeira|esmerilhadeira|lixadeira|compressor|macaco|torqu[ií]metro|mult[ií]metro|politriz|lavadora|aspirador|serra|tupia|martelete|martelo|marreta|trena|n[ií]vel|paqu[ií]metro|maleta|broca|bits?\b|helicoil|extrator|rebitador|grampeador|pistola|solda|talhadeira|lima\b|torno|morsa|calibrador|inflador|carregador de bateria|guincho|cavalete|estilete|formão|plaina|desempenadeira|multiuso)/i;
 const NICHO_FORA = /(impress[aã]o 3d|brinquedo|infantil|joalher|rel[oó]gio|cosm[eé]tic|maquiagem|cozinha|panela|celular|smartphone|fone de|capinha|\bpet\b|cachorro|beb[eê]|roupa|camiseta|sapato|t[eê]nis|mochila escolar|bijuteria|artesanato|resina|tabuleiro)/i;
 const tituloDoNicho = (titulo) => NICHO_OK.test(String(titulo)) && !NICHO_FORA.test(String(titulo));
 
@@ -68,6 +72,18 @@ const GRUPOS = [
   ['solda/pintura', /solda|pistola|pintura/i],
   ['kits/jogos', /\bjogo|\bkit|ferrament/i],
 ];
+// ---- MARCAS: para não encher a rodada com uma marca só ----
+const MARCAS_ELITE = ['makita', 'dewalt', 'gedore', 'milwaukee', 'hikoki', 'wurth', 'irwin', 'bosch', 'stanley'];
+const MARCAS = [...MARCAS_ELITE, 'the black tools', 'black tools', 'black decker', 'tramontina', 'vonder', 'sparta', 'wap',
+  'worker', 'mtx', 'tork', 'einhell', 'ingco', 'fortg', 'lotus', 'karcher', 'skil', 'toyama', 'schulz',
+  'chiaperini', 'tekna', 'famastil', 'robust', 'evolut', 'hilda', 'dexter', 'eda', 'bremen', 'kala',
+  'yeet', 'dwt', 'wesco', 'brasfort', 'nove54', 'vulcan', 'tomate', 'bellota', 'tigre', 'gross', 'deko', 'palisad'];
+function marcaDe(titulo) {
+  const t = ' ' + String(titulo).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9+]+/g, ' ') + ' ';
+  for (const m of MARCAS) if (t.includes(' ' + m.replace('+', ' ') + ' ') || t.includes(' ' + m + ' ')) return m === 'black tools' ? 'the black tools' : m;
+  return '';
+}
+
 // Sem grupo conhecido? Agrupa pela primeira palavra do título (assim "outros" também tem limite por tipo).
 const grupoDe = (titulo) => {
   for (const [nome, re] of GRUPOS) if (re.test(String(titulo))) return nome;
@@ -238,6 +254,35 @@ async function lerBusca(page) {
   });
 }
 
+// Página de busca veio VAZIA: registra o que o robô está vendo, rola a página (carga preguiçosa)
+// e, se era uma página adiante, tenta a página 1 da mesma busca.
+async function lerBuscaVazia(page, busca, pag) {
+  try {
+    const d = await page.evaluate(() => ({
+      t: document.title, n: document.querySelectorAll('div.poly-card').length,
+      txt: (document.body ? document.body.innerText : '').replace(/\s+/g, ' ').slice(0, 140),
+    }));
+    log(`   🩺 Página vazia. Título: "${d.t}" | cartões: ${d.n} | texto: "${d.txt}"`);
+  } catch (_) {}
+  try {
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2));
+    await esperar(3500);
+    let lidos = await lerBusca(page);
+    if (lidos.length) { log('   ↩️ Os produtos apareceram depois de rolar a página.'); return lidos; }
+    if (pag > 1) {
+      log('   ↩️ Tentando a página 1 dessa busca...');
+      const url1 = `https://lista.mercadolivre.com.br/${busca}_Discount_${CONFIG.descontoMin}-100_NoIndex_True`;
+      if (await abrir(page, url1, 'Captcha na busca. Resolva na janela do Chrome.')) {
+        await esperar(2500);
+        lidos = await lerBusca(page);
+        if (lidos.length) log(`   ↩️ Página 1 trouxe ${lidos.length} produtos (a página ${pag} estava além do fim).`);
+        return lidos;
+      }
+    }
+  } catch (_) {}
+  return [];
+}
+
 // ROTA 1: barra "Afiliados" na página do produto -> botão Compartilhar.
 async function linkPelaBarra(page) {
   try {
@@ -278,7 +323,7 @@ async function linkPeloPainel(page, urlProduto) {
 }
 
 // ---------- uma rodada ----------
-const LIMITE_PRODUTO_MS = Number(process.env.COLETOR_LIMITE_MS) || 150000; // máximo por produto (sem contar o tempo de captcha)
+const LIMITE_PRODUTO_MS = Number(process.env.COLETOR_LIMITE_MS) || 75000; // máximo por produto (sem contar o tempo de captcha)
 const LOTE_ENVIO = Number(process.env.COLETOR_LOTE) || 20; // envia ao servidor a cada N produtos com link (nada fica preso no PC)
 
 // Roda uma tarefa com prazo. O prazo "pausa" enquanto o robô espera VOCÊ resolver um captcha.
@@ -336,12 +381,18 @@ async function rodada(browser, meta) {
     let repetidosTitulo = 0;
 
     // sorteia buscas/páginas até juntar candidatos suficientes e variados
-    const buscas = [...CONFIG.buscas].sort(() => Math.random() - 0.5);
-    const maxBuscas = Math.max(6, Math.ceil(meta / 6));
+    const embaralha = (l) => l.slice().sort(() => Math.random() - 0.5);
+    const maxBuscas = Math.max(8, Math.ceil(meta / 3));
+    const nPremium = Math.min(4, Math.max(2, Math.round(maxBuscas * 0.2)));
+    const buscas = embaralha([
+      ...embaralha(CONFIG.buscas).slice(0, maxBuscas - nPremium),
+      ...embaralha(CONFIG.buscasPremium).slice(0, nPremium),
+    ]);
     let feitas = 0;
-    for (const busca of buscas.slice(0, maxBuscas)) {
-      if (candidatos.length >= meta * 2 && feitas >= Math.min(10, maxBuscas)) break;
-      const pag = 1 + Math.floor(Math.random() * CONFIG.paginasMax);
+    let zerosSeguidos = 0;
+    for (const busca of buscas) {
+      if (candidatos.length >= meta * 3 && feitas >= Math.min(12, maxBuscas)) break;
+      const pag = [1, 1, 2, 2, 3, 4][Math.floor(Math.random() * 6)];
       const desde = pag > 1 ? `_Desde_${(pag - 1) * 48 + 1}` : '';
       const urlBusca = `https://lista.mercadolivre.com.br/${busca}${desde}_Discount_${CONFIG.descontoMin}-100_NoIndex_True`;
       log(`🔎 Buscando "${busca}" (página ${pag})`);
@@ -349,7 +400,11 @@ async function rodada(browser, meta) {
       try {
         if (!(await abrir(page, urlBusca, 'Captcha na busca. Resolva na janela do Chrome.'))) continue;
         await esperar(2500);
-        const lidos = await lerBusca(page);
+        let lidos = await lerBusca(page);
+        if (lidos.length === 0) lidos = await lerBuscaVazia(page, busca, pag);
+        zerosSeguidos = lidos.length === 0 ? zerosSeguidos + 1 : 0;
+        if (zerosSeguidos >= 6) { log('   🛑 6 buscas vazias seguidas: paro de buscar e sigo com o que já achei.'); break; }
+        if (zerosSeguidos === 3) { log('   ⏸️ 3 buscas vazias seguidas: descanso de 2 min para o site se acalmar.'); await esperar(120000); }
         for (const p of lidos) {
           const id = idDoLink(p.url);
           if (!id || vistos.has(id) || jaTem.ids.has(id)) continue;
@@ -377,11 +432,17 @@ async function rodada(browser, meta) {
     const capGrupo = Math.max(4, Math.round(meta * 0.12));
     log(`🧮 ${candidatos.length} candidatos de ${new Set(candidatos.map((c) => grupoDe(c.titulo))).size} tipos. Limite de ${capGrupo} por tipo nesta rodada.`);
 
+    const capMarca = Math.max(3, Math.round(meta * 0.07));
+    const capElite = Math.max(6, Math.round(meta * 0.2));
+    const porMarca = {};
+    let timeoutsSeguidos = 0;
     let falhasLink = 0;
     for (const p of candidatos) {
       if (resultado.filter((r) => r.linkAfiliado).length >= meta) break;
       const g = grupoDe(p.titulo);
       if ((porGrupo[g] || 0) >= capGrupo) continue;
+      const marca = marcaDe(p.titulo);
+      if (marca && (porMarca[marca] || 0) >= (MARCAS_ELITE.includes(marca) ? capElite : capMarca)) continue;
       log('➡️  ' + p.titulo.slice(0, 70));
 
       // Tudo que é feito em UM produto fica aqui dentro. Se der erro ou demorar demais,
@@ -457,8 +518,15 @@ async function rodada(browser, meta) {
       } catch (e) {
         log(`   ⚠️ Pulei este produto (${e.message}). Abrindo uma aba nova...`);
         await novaAba();
+        timeoutsSeguidos++;
+        if (timeoutsSeguidos >= 3) {
+          log('   ⏸️ 3 produtos seguidos travaram: descanso de 3 min (o site costuma falhar em rajadas).');
+          await esperar(180000);
+          timeoutsSeguidos = 0;
+        }
         continue;
       }
+      timeoutsSeguidos = 0;
       if (r.pular) { log('   ⏭️ ' + r.pular); continue; }
 
       resultado.push(r.item);
@@ -466,6 +534,7 @@ async function rodada(browser, meta) {
       if (r.link) {
         falhasLink = 0;
         porGrupo[g] = (porGrupo[g] || 0) + 1;
+        if (marca) porMarca[marca] = (porMarca[marca] || 0) + 1;
         naoEnviados.push(r.item);
         log(`   ✅ ${r.link} | R$ ${r.item.preco} (de R$ ${r.item.precoAntigo}, -${r.item.desconto}%) | ganho ${r.item.ganhoPercentual ?? '?'}% | via ${r.via} | ${g}`);
         await enviarPendentes(false);
@@ -481,6 +550,8 @@ async function rodada(browser, meta) {
         }
       }
     }
+    log('📊 Por tipo: ' + (Object.entries(porGrupo).map(([k, v]) => `${k} ${v}`).join(' | ') || '-'));
+    log('📊 Por marca: ' + (Object.entries(porMarca).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(' | ') || '-'));
   } finally {
     await enviarPendentes(true); // o que sobrou vai ao servidor mesmo se a rodada terminou com erro
     await page.close().catch(() => {});
