@@ -54,7 +54,7 @@ const SERVIDOR = {
 
 // Só entram produtos do nicho (ferramentas). Título precisa ter uma palavra do nicho e nenhuma de fora.
 const NICHO_OK = /\b(dewalt|makita|gedore|milwaukee|hikoki|wurth|irwin|ferrament|chave|soquete|catraca|alicate|furadeira|parafusadeira|esmerilhadeira|lixadeira|compressor|macaco|torqu[ií]metro|mult[ií]metro|politriz|lavadora|aspirador|serra|tupia|martelete|martelo|marreta|trena|n[ií]vel|paqu[ií]metro|maleta|broca|bits?\b|helicoil|extrator|rebitador|grampeador|pistola|solda|talhadeira|lima\b|torno|morsa|calibrador|inflador|carregador de bateria|guincho|cavalete|estilete|formão|plaina|desempenadeira|multiuso)/i;
-const NICHO_FORA = /(impress[aã]o 3d|brinquedo|infantil|joalher|rel[oó]gio|cosm[eé]tic|maquiagem|cozinha|panela|celular|smartphone|fone de|capinha|\bpet\b|cachorro|beb[eê]|roupa|camiseta|sapato|t[eê]nis|mochila escolar|bijuteria|artesanato|resina|tabuleiro)/i;
+const NICHO_FORA = /(compat[ií]vel (com|para|c\/|p\/)|compat[ií]vel p\/|induzido|escova de carv[aã]o|mandril|\brotor\b|estator|carca[cç]a|engrenagem|gatilho|reposi[cç][aã]o|adaptador de bateria|adaptador mt|impress[aã]o 3d|brinquedo|infantil|joalher|rel[oó]gio|cosm[eé]tic|maquiagem|cozinha|panela|celular|smartphone|fone de|capinha|\bpet\b|cachorro|beb[eê]|roupa|camiseta|sapato|t[eê]nis|mochila escolar|bijuteria|artesanato|resina|tabuleiro)/i;
 const tituloDoNicho = (titulo) => NICHO_OK.test(String(titulo)) && !NICHO_FORA.test(String(titulo));
 
 // Variedade: agrupa os produtos por tipo e intercala, com limite por grupo em cada rodada.
@@ -254,32 +254,49 @@ async function lerBusca(page) {
   });
 }
 
-// Página de busca veio VAZIA: registra o que o robô está vendo, rola a página (carga preguiçosa)
-// e, se era uma página adiante, tenta a página 1 da mesma busca.
-async function lerBuscaVazia(page, busca, pag) {
+// Página de busca veio VAZIA. O site às vezes demora a mostrar os cartões (ou recarrega a página
+// numa versão "Black Friday"). Escala a recuperação: espera mais -> recarrega -> aba nova -> página 1.
+// "getPage" devolve sempre a aba ATUAL (o coletor troca de aba quando abre uma nova).
+async function lerBuscaVazia(getPage, novaAba, busca, pag, urlBusca) {
   try {
-    const d = await page.evaluate(() => ({
-      t: document.title, n: document.querySelectorAll('div.poly-card').length,
-      txt: (document.body ? document.body.innerText : '').replace(/\s+/g, ' ').slice(0, 140),
+    const d = await getPage().evaluate(() => ({
+      t: document.title, n: document.querySelectorAll('div.poly-card').length, e: document.readyState,
+      txt: (document.body ? document.body.innerText : '').replace(/\s+/g, ' ').slice(0, 100),
     }));
-    log(`   🩺 Página vazia. Título: "${d.t}" | cartões: ${d.n} | texto: "${d.txt}"`);
+    log(`   🩺 Página vazia. Título: "${d.t}" | cartões: ${d.n} | estado: ${d.e} | texto: "${d.txt}"`);
   } catch (_) {}
+
+  const esperarCartoes = async (ms) => {
+    try { await getPage().waitForFunction(() => document.querySelectorAll('div.poly-card').length > 0, { timeout: ms }); } catch (_) {}
+    try { return await lerBusca(getPage()); } catch (_) { return []; }
+  };
+
+  let lidos = await esperarCartoes(12000);
+  if (lidos.length) { log('   ↩️ Os produtos apareceram depois de esperar mais (página lenta).'); return lidos; }
+
+  try { await getPage().reload({ waitUntil: 'domcontentloaded', timeout: 45000 }); } catch (_) {}
+  lidos = await esperarCartoes(12000);
+  if (lidos.length) { log('   ↩️ Recarregar a página resolveu.'); return lidos; }
+
   try {
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2));
-    await esperar(3500);
-    let lidos = await lerBusca(page);
-    if (lidos.length) { log('   ↩️ Os produtos apareceram depois de rolar a página.'); return lidos; }
-    if (pag > 1) {
-      log('   ↩️ Tentando a página 1 dessa busca...');
+    await novaAba();
+    if (await abrir(getPage(), urlBusca, 'Captcha na busca. Resolva na janela do Chrome.')) {
+      lidos = await esperarCartoes(12000);
+      if (lidos.length) { log('   ↩️ Abrir uma aba nova resolveu.'); return lidos; }
+    }
+  } catch (_) {}
+
+  if (pag > 1) {
+    log('   ↩️ Tentando a página 1 dessa busca...');
+    try {
       const url1 = `https://lista.mercadolivre.com.br/${busca}_Discount_${CONFIG.descontoMin}-100_NoIndex_True`;
-      if (await abrir(page, url1, 'Captcha na busca. Resolva na janela do Chrome.')) {
-        await esperar(2500);
-        lidos = await lerBusca(page);
+      if (await abrir(getPage(), url1, 'Captcha na busca. Resolva na janela do Chrome.')) {
+        lidos = await esperarCartoes(12000);
         if (lidos.length) log(`   ↩️ Página 1 trouxe ${lidos.length} produtos (a página ${pag} estava além do fim).`);
         return lidos;
       }
-    }
-  } catch (_) {}
+    } catch (_) {}
+  }
   return [];
 }
 
@@ -401,10 +418,10 @@ async function rodada(browser, meta) {
         if (!(await abrir(page, urlBusca, 'Captcha na busca. Resolva na janela do Chrome.'))) continue;
         await esperar(2500);
         let lidos = await lerBusca(page);
-        if (lidos.length === 0) lidos = await lerBuscaVazia(page, busca, pag);
+        if (lidos.length === 0) lidos = await lerBuscaVazia(() => page, novaAba, busca, pag, urlBusca);
         zerosSeguidos = lidos.length === 0 ? zerosSeguidos + 1 : 0;
         if (zerosSeguidos >= 6) { log('   🛑 6 buscas vazias seguidas: paro de buscar e sigo com o que já achei.'); break; }
-        if (zerosSeguidos === 3) { log('   ⏸️ 3 buscas vazias seguidas: descanso de 2 min para o site se acalmar.'); await esperar(120000); }
+        if (zerosSeguidos === 3) { log('   ⏸️ 3 buscas vazias seguidas: descanso de 45 s.'); await esperar(45000); }
         for (const p of lidos) {
           const id = idDoLink(p.url);
           if (!id || vistos.has(id) || jaTem.ids.has(id)) continue;
